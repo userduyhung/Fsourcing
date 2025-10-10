@@ -1,32 +1,95 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { Search, Shield, Globe, TrendingUp, Users, BarChart3, Package, Star, ArrowRight, Mail, Phone, MapPin } from 'lucide-react';
 import Logo from './components/Logo';
 import SearchBar from './components/SearchBar';
 import ProductShowcase from './components/ProductShowcase';
+import UserMenu from './components/UserMenu';
 import ProductList from './pages/ProductList';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import UnifiedRegister from './pages/UnifiedRegister';
+import About from './pages/About';
+import Services from './pages/Services';
+import SupplierRegister from './pages/SupplierRegister';
+import ChatWidget from './components/ChatWidget';
+
+import AdminLayout from './pages/admin/AdminLayout';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import UserManagement from './pages/admin/UserManagement';
+import SellerApproval from './pages/admin/SellerApproval';
+import ProtectedRoute from './components/ProtectedRoute';
+import BuyerRegister from './pages/buyer/BuyerRegister';
+import ForgotPassword from './pages/buyer/ForgotPassword';
+import ChangePassword from './pages/buyer/ChangePassword';
+import BuyerLayout from './pages/buyer/BuyerLayout';
+import BuyerDashboard from './pages/buyer/BuyerDashboard';
+import BuyerProfile from './pages/buyer/BuyerProfile';
+import SellerSearch from './pages/buyer/SellerSearch';
+import BuyerProtectedRoute from './components/BuyerProtectedRoute';
+import SellerDetail from './pages/buyer/SellerDetail';
+import BuyerRFQList from './pages/buyer/BuyerRFQList';
 
 function App() {
+  const [user, setUser] = useState<{name: string, role: string} | null>(null);
+
+  useEffect(() => {
+    const checkUserSession = () => {
+      const adminToken = localStorage.getItem('adminToken');
+      const buyerToken = localStorage.getItem('buyerToken');
+      const sellerToken = localStorage.getItem('sellerToken');
+      const userName = localStorage.getItem('userName');
+      const userRole = localStorage.getItem('userRole');
+      
+      if ((adminToken || buyerToken || sellerToken) && userName && userRole) {
+        setUser({name: userName, role: userRole});
+      } else {
+        setUser(null);
+      }
+    };
+
+    checkUserSession();
+    
+    // Listen for storage changes (when user logs in from another tab)
+    window.addEventListener('storage', checkUserSession);
+    
+    // Listen for login events
+    window.addEventListener('userLoggedIn', checkUserSession);
+    
+    return () => {
+      window.removeEventListener('storage', checkUserSession);
+      window.removeEventListener('userLoggedIn', checkUserSession);
+    };
+  }, []);
+
   return (
     <Router>
       <div className="min-h-screen bg-white">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <header className="bg-white border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <div className="flex items-center">
-                <Logo className="h-8 w-8" />
-                <span className="ml-2 text-xl font-bold text-gray-900">Fsourcing</span>
+                <Link to="/" className="flex items-center">
+                  <Logo className="h-8 w-8" />
+                  <span className="ml-2 text-xl font-bold text-gray-900">Fsourcing</span>
+                </Link>
               </div>
               <nav className="hidden md:flex space-x-8">
                 <Link to="/" className="text-gray-600 hover:text-blue-600 transition-colors">Suppliers</Link>
                 <Link to="/products" className="text-gray-600 hover:text-blue-600 transition-colors">Products</Link>
-                <Link to="#" className="text-gray-600 hover:text-blue-600 transition-colors">Services</Link>
-                <Link to="#" className="text-gray-600 hover:text-blue-600 transition-colors">About</Link>
+                <Link to="/services" className="text-gray-600 hover:text-blue-600 transition-colors">Services</Link>
+                <Link to="/about" className="text-gray-600 hover:text-blue-600 transition-colors">About</Link>
               </nav>
               <div className="flex items-center space-x-4">
-                <button className="text-gray-600 hover:text-blue-600 transition-colors">Sign In</button>
-                <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">Join Now</button>
+                {user ? (
+                  <UserMenu userName={user.name} userRole={user.role} />
+                ) : (
+                  <>
+                    <Link to="/login" className="text-gray-600 hover:text-blue-600 transition-colors">Sign In</Link>
+                    <Link to="/join" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">Join Now</Link>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -35,6 +98,7 @@ function App() {
         <Routes>
           <Route path="/" element={
             <>
+              <ChatWidget />
               {/* Hero Section */}
               <section className="bg-gradient-to-br from-blue-50 to-indigo-100 pt-16 pb-20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -56,9 +120,9 @@ function App() {
                       <button className="bg-blue-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-all transform hover:scale-105 shadow-lg">
                         Start Sourcing Now
                       </button>
-                      <button className="border-2 border-blue-600 text-blue-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-600 hover:text-white transition-colors">
+                      <Link to="/supplier-register" className="border-2 border-blue-600 text-blue-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-600 hover:text-white transition-colors">
                         Become a Supplier
-                      </button>
+                      </Link>
                     </div>
                     <div className="relative max-w-4xl mx-auto">
                       <div className="bg-white rounded-xl shadow-2xl p-4">
@@ -302,7 +366,33 @@ function App() {
             </>
           } />
           <Route path="/products" element={<ProductList />} />
-        </Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/join" element={<UnifiedRegister />} />
+          <Route path="/supplier-register" element={<SupplierRegister />} />
+          <Route path="/legacy-register" element={<Register />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/services" element={<Services />} />
+          
+          {/* Admin Routes */}
+
+          <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="users" element={<UserManagement />} />
+            <Route path="sellers" element={<SellerApproval />} />
+          </Route>
+
+          {/* Buyer Routes */}
+          <Route path="/buyer/register" element={<BuyerRegister />} />
+          <Route path="/buyer/forgot-password" element={<ForgotPassword />} />
+          <Route path="/buyer" element={<BuyerProtectedRoute><BuyerLayout /></BuyerProtectedRoute>}>
+            <Route path="dashboard" element={<BuyerDashboard />} />
+            <Route path="profile" element={<BuyerProfile />} />
+            <Route path="sellers" element={<SellerSearch />} />
+            <Route path="change-password" element={<ChangePassword />} />
+            <Route path="rfqs" element={<BuyerRFQList />} />
+          </Route>
+          <Route path="/seller/:id" element={<SellerDetail />} />
+         </Routes>
 
         {/* Footer */}
         <footer className="bg-slate-dark text-white pt-16 pb-8">
