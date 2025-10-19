@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface ProductCardProps {
   image: string;
@@ -8,9 +9,28 @@ interface ProductCardProps {
   description: string;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ image, price, quantity, name, description }) => {
+import { ShoppingCart } from 'lucide-react';
+const ProductCard: React.FC<ProductCardProps & { onAddToCart?: (product: any) => void }> = ({ image, price, quantity, name, description, onAddToCart }) => {
+  const navigate = useNavigate();
+  const handleClick = () => {
+    navigate(`/product/${encodeURIComponent(name)}`, { state: { product: { image, price, quantity, name, description } } });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onAddToCart) {
+      onAddToCart({ id: name, name, price: parseFloat(price.replace(/[^\d.]/g, '')), image });
+    }
+  };
   return (
-    <div className="bg-white rounded-lg shadow-sm p-2 flex flex-col items-center">
+    <div className="bg-white rounded-lg shadow-sm p-2 flex flex-col items-center cursor-pointer hover:shadow-lg relative" onClick={handleClick}>
+      <button
+        className="absolute top-2 right-2 bg-blue-100 hover:bg-blue-200 p-2 rounded-full z-10"
+        onClick={handleAddToCart}
+        title="Add to cart"
+      >
+        <ShoppingCart className="h-5 w-5 text-blue-600" />
+      </button>
       <img src={image} alt={name} className="w-full h-32 object-contain rounded-md mb-2" />
       <div className="w-full">
         <div className="font-bold text-base text-gray-900 mb-0.5">{price}</div>
@@ -20,6 +40,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ image, price, quantity, name,
       </div>
     </div>
   );
-};
+}
+
 
 export default ProductCard;
