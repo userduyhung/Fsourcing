@@ -7,14 +7,19 @@ const categories = [
   'Beauty & Personal Care',
   'Consumer Electronics',
   'Electronic Components',
-  'Fashion Accessories & Footwear',
+  'Fashion Accessories and Footwear',
 ];
 
 const ProductCategoryTabs: React.FC<{ onSelect?: (category: string) => void }> = ({ onSelect }) => {
   const [selected, setSelected] = useState(categories[0]);
 
   return (
-    <div className="flex overflow-x-auto bg-white rounded-xl mb-6">
+    <div className="flex overflow-x-auto bg-white rounded-xl mb-6 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      <style>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
       {categories.map((cat) => (
         <button
           key={cat}
