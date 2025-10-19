@@ -86,7 +86,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      handleSearch();
+      if (selectedCategory === 'Products') {
+        handleProductSearch();
+      } else {
+        handleSearch();
+      }
     }
   };
 
@@ -94,6 +98,17 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
     setSearchQuery(suggestion);
     setShowSuggestions(false);
   };
+
+  // --- Product Search Integration ---
+  const handleProductSearch = () => {
+    if (!searchQuery.trim()) return;
+    // Save to history
+    saveToHistory(searchQuery);
+    setShowSuggestions(false);
+    // Navigate to /products with search query
+    window.location.href = `/products?search=${encodeURIComponent(searchQuery)}`;
+  };
+
 
   return (
     <div className={`relative ${className}`}>
@@ -156,7 +171,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
             type="text"
             value={searchQuery}
             onChange={(e) => handleInputChange(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyPress={selectedCategory === 'Products' ? (e => { if (e.key === 'Enter') handleProductSearch(); }) : handleKeyPress}
             onFocus={() => updateSuggestions(searchQuery)}
             placeholder="I'm looking for..."
             className="w-full px-4 py-3 text-gray-700 placeholder-gray-400 focus:outline-none"
@@ -189,7 +204,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
 
         {/* Search Button */}
         <button
-          onClick={handleSearch}
+          onClick={selectedCategory === 'Products' ? handleProductSearch : handleSearch}
           className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 font-medium transition-colors flex items-center justify-center sm:justify-start"
         >
           <Search className="h-4 w-4 sm:mr-2" />
