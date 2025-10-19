@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, LogOut } from 'lucide-react';
 
 interface LogoutModalProps {
@@ -9,11 +10,22 @@ interface LogoutModalProps {
 }
 
 const LogoutModal: React.FC<LogoutModalProps> = ({ isOpen, onClose, onConfirm, userName }) => {
+  // Prevent background scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      const previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = previousOverflow;
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+  return createPortal(
+    <div className="fixed inset-0 left-0 right-0 top-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000]">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Xác nhận đăng xuất</h3>
           <button
@@ -56,7 +68,8 @@ const LogoutModal: React.FC<LogoutModalProps> = ({ isOpen, onClose, onConfirm, u
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
