@@ -17,7 +17,6 @@ import { ProductList } from './pages/ProductList';
 import ProductDetail from './pages/ProductDetail';
 import Login from './pages/Login';
 import SellerLogin from './pages/seller/SellerLogin';
-import SellerRegister from './pages/seller/SellerRegister';
 import SellerForgotPassword from './pages/seller/SellerForgotPassword';
 import SellerChangePassword from './pages/seller/SellerChangePassword';
 import SellerSearch from './pages/seller/SellerSearch';
@@ -25,26 +24,20 @@ import Register from './pages/Register';
 import UnifiedRegister from './pages/UnifiedRegister';
 import About from './pages/About';
 import Services from './pages/Services';
-import SupplierRegister from './pages/SupplierRegister';
 import ChatWidget from './components/ChatWidget';
 import CartModal from './components/CartModal';
-import CartPage from './pages/CartPage';
-import CheckoutPage from './pages/CheckoutPage';
+import CartPage from './pages/buyer/CartPage';
+import CheckoutPage from './pages/buyer/CheckoutPage';
 
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagement from './pages/admin/UserManagement';
 import SellerApproval from './pages/admin/SellerApproval';
-import ProtectedRoute from './components/ProtectedRoute';
 import BuyerRegister from './pages/buyer/BuyerRegister';
 import ForgotPassword from './pages/buyer/ForgotPassword';
 import ChangePassword from './pages/buyer/ChangePassword';
-import BuyerLayout from './pages/buyer/BuyerLayout';
 import BuyerDashboard from './pages/buyer/BuyerDashboard';
 import BuyerProfile from './pages/buyer/BuyerProfile';
-
-
-import BuyerProtectedRoute from './components/BuyerProtectedRoute';
 import SellerDetail from './pages/buyer/SellerDetail';
 import BuyerRFQList from './pages/buyer/BuyerRFQList';
 
@@ -422,9 +415,9 @@ function App() {
           <Route path="/unified-register" element={<UnifiedRegister />} />
           <Route path="/about" element={<About />} />
           <Route path="/services" element={<Services />} />
-          <Route path="/supplier-register" element={<SupplierRegister />} />
+          <Route path="/supplier-register" element={<Register />} />
           <Route path="/seller/login" element={<SellerLogin />} />
-          <Route path="/seller/register" element={<SellerRegister />} />
+          <Route path="/seller/register" element={<Register />} />
           <Route path="/seller/forgot-password" element={<SellerForgotPassword />} />
           <Route path="/seller/change-password" element={<SellerChangePassword />} />
           <Route path="/seller/search" element={<SellerSearch />} />
