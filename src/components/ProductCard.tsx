@@ -23,24 +23,24 @@ const ProductCard: React.FC<ProductCardProps & { onAddToCart?: (product: any) =>
     }
   };
   return (
-    <div className="bg-white rounded-lg shadow-sm p-2 flex flex-col items-center cursor-pointer hover:shadow-lg relative" onClick={handleClick}>
+    <div className="bg-white rounded-lg shadow-sm p-2 flex flex-col items-center cursor-pointer hover:shadow-lg relative font-sans" onClick={handleClick}>
       <button
         className="absolute top-2 right-2 bg-blue-100 hover:bg-blue-200 p-2 rounded-full z-10"
         onClick={handleAddToCart}
-        title="Add to cart"
+        title="Thêm vào giỏ hàng"
       >
         <ShoppingCart className="h-5 w-5 text-blue-600" />
       </button>
       <img src={image} alt={name} className="w-full h-32 object-contain rounded-md mb-2" />
       <div className="w-full">
-        <div className="font-bold text-base text-gray-900 mb-0.5">{price}</div>
-        <div className="text-gray-400 text-xs mb-0.5">{quantity}</div>
-        <div className="text-gray-700 text-sm font-medium">{name}</div>
-        <div className="text-gray-500 text-xs mt-0.5">{description}</div>
+        <div className="font-bold text-base text-gray-900 mb-0.5 font-sans">{price}</div>
+        <div className="text-gray-400 text-xs mb-0.5 font-sans">Số lượng: {quantity}</div>
+        <div className="text-gray-700 text-sm font-medium font-sans">{name}</div>
+        <div className="text-gray-500 text-xs mt-0.5 font-sans">{description}</div>
       </div>
+
     </div>
   );
 }
-
 
 export default ProductCard;
