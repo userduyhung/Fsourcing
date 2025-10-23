@@ -50,8 +50,7 @@ const BuyerLogin: React.FC = () => {
         }));
         
         setIsLoading(false);
-        navigate('/buyer/dashboard');
-      } else {
+          navigate('/buyer/dashboard');      } else {
         setIsLoading(false);
         setErrors({ general: 'Invalid email or password' });
       }

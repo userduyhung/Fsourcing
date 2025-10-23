@@ -30,6 +30,8 @@ interface Seller {
 }
 
 const SellerSearch: React.FC = () => {
+  // Scroll to top when mount
+  React.useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, []);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('');

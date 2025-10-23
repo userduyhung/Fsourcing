@@ -19,6 +19,8 @@ interface RFQ {
 }
 
 const BuyerRFQList: React.FC = () => {
+  // Scroll to top when mount
+  React.useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, []);
   const rfqs: RFQ[] = JSON.parse(localStorage.getItem('buyerRFQs') || '[]');
 
   return (

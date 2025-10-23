@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Lock, CheckCircle } from 'lucide-react';
 
 const ChangePassword: React.FC = () => {
+  // Scroll to top when mount
+  React.useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, []);
   const [formData, setFormData] = useState({
     currentPassword: '',
     newPassword: '',

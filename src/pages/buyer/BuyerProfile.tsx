@@ -26,6 +26,8 @@ interface ProfileData {
 }
 
 const BuyerProfile: React.FC = () => {
+  // Scroll to top when mount
+  React.useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, []);
   // Get buyer profile from localStorage
   const savedProfile = JSON.parse(localStorage.getItem('buyerProfile') || '{}');
   

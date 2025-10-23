@@ -27,6 +27,8 @@ const sellerDemo = {
 };
 
 const SellerDetail: React.FC = () => {
+  // Scroll to top when mount
+  React.useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, []);
   const { id } = useParams();
   const seller = sellerDemo; // Replace with fetch by id in real app
   const [showRFQ, setShowRFQ] = React.useState(false);
