@@ -6,7 +6,7 @@ interface SearchBarProps {
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
-  const [selectedCategory, setSelectedCategory] = useState('Products');
+  const [selectedCategory, setSelectedCategory] = useState('Sản phẩm');
   const [searchQuery, setSearchQuery] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -20,15 +20,15 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
   });
 
   const categories = [
-    { name: 'Products', icon: Package },
-    { name: 'Suppliers', icon: Users }
+    { name: 'Sản phẩm', icon: Package },
+    { name: 'Nhà cung cấp', icon: Users }
   ];
 
   // Sample data for suggestions
   const allSuggestions = [
-    'Electronics', 'LED Lights', 'Mobile Accessories', 'Textiles', 'Cotton Fabric',
-    'Machinery', 'CNC Machine', 'Automotive Parts', 'Car Battery', 'Solar Panel',
-    'Medical Equipment', 'Furniture', 'Kitchen Appliances', 'Toys', 'Sports Equipment'
+    'Điện tử', 'Đèn LED', 'Phụ kiện điện thoại', 'Dệt may', 'Vải cotton',
+    'Máy móc', 'Máy CNC', 'Phụ tùng ô tô', 'Ắc quy xe hơi', 'Tấm pin năng lượng mặt trời',
+    'Thiết bị y tế', 'Nội thất', 'Đồ gia dụng', 'Đồ chơi', 'Thiết bị thể thao'
   ];
 
   // Load search history from localStorage
@@ -71,12 +71,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
   const handleSearch = () => {
     if (!searchQuery.trim()) return;
     
-    console.log('Searching for:', searchQuery, 'in category:', selectedCategory, 'with filters:', filters);
     saveToHistory(searchQuery);
     setShowSuggestions(false);
     
     // Simulate API call - replace with real search logic
-    alert(`Searching for "${searchQuery}" in ${selectedCategory}\nLocation: ${filters.location || 'All'}\nIndustry: ${filters.industry || 'All'}\nCertification: ${filters.certification || 'All'}`);
+    alert(`Tìm kiếm "${searchQuery}" trong ${selectedCategory}\nĐịa điểm: ${filters.location || 'Tất cả'}\nNgành: ${filters.industry || 'Tất cả'}\nChứng nhận: ${filters.certification || 'Tất cả'}`);
   };
 
   const handleInputChange = (value: string) => {
@@ -86,7 +85,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      if (selectedCategory === 'Products') {
+      if (selectedCategory === 'Sản phẩm') {
         handleProductSearch();
       } else {
         handleSearch();
@@ -109,222 +108,134 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
     window.location.href = `/products?search=${encodeURIComponent(searchQuery)}`;
   };
 
-
   return (
-    <div className={`relative ${className}`}>
-      <div className="flex flex-col sm:flex-row bg-white rounded-lg shadow-lg border border-gray-200 max-w-4xl mx-auto">
-        {/* Category Dropdown */}
+    <div className={`relative ${className} font-sans`}>
+  <div className="flex flex-col sm:flex-row bg-white rounded-lg shadow-lg border border-gray-200 max-w-4xl mx-auto">
         <div className="relative sm:min-w-[120px] overflow-visible">
           <button
-            onClick={() => {
-              console.log('Dropdown clicked, current state:', isDropdownOpen);
-              setIsDropdownOpen(!isDropdownOpen);
-            }}
-            className="flex items-center justify-between w-full px-4 py-3 bg-gray-50 border-b sm:border-b-0 sm:border-r border-gray-200 hover:bg-gray-100 transition-colors rounded-tl-lg sm:rounded-bl-lg sm:rounded-tl-lg sm:rounded-tr-none rounded-tr-lg"
+            type="button"
+            className="flex items-center justify-between w-full px-4 py-3 bg-gray-50 border-b sm:border-b-0 sm:border-r border-gray-200 hover:bg-gray-100 transition-colors rounded-tl-lg sm:rounded-bl-lg sm:rounded-tl-lg sm:rounded-tr-none rounded-tr-lg font-sans"
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           >
             <div className="flex items-center">
               {(() => {
                 const CurrentIcon = getCurrentCategoryIcon();
                 return <CurrentIcon className="h-4 w-4 mr-2 text-gray-600" />;
               })()}
-              <span className="text-gray-700 font-medium">{selectedCategory}</span>
+              <span className="text-gray-700 font-medium font-sans">{selectedCategory}</span>
             </div>
             <ChevronDown className="ml-2 h-4 w-4 text-gray-500" />
           </button>
-          
-          {/* Dropdown Menu */}
           {isDropdownOpen && (
-            <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-b-lg shadow-xl z-50 min-w-[200px]">
-              {categories.map((category) => {
-                const IconComponent = category.icon;
-                const isSuppliers = category.name === 'Suppliers';
-                return (
-                  <button
-                    key={category.name}
-                    onClick={() => {
-                      setSelectedCategory(category.name);
-                      setIsDropdownOpen(false);
-                    }}
-                    className={`flex items-center w-full px-4 py-3 text-left transition-colors ${
-                      isSuppliers 
-                        ? 'text-blue-600 bg-blue-50 hover:bg-blue-100 font-medium' 
-                        : 'text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    <IconComponent className="h-4 w-4 mr-3" />
-                    {category.name}
-                    {isSuppliers && (
-                      <span className="ml-auto text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">
-                        Popular
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Search Input */}
-        <div className="flex-1 relative">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => handleInputChange(e.target.value)}
-            onKeyPress={selectedCategory === 'Products' ? (e => { if (e.key === 'Enter') handleProductSearch(); }) : handleKeyPress}
-            onFocus={() => updateSuggestions(searchQuery)}
-            placeholder="I'm looking for..."
-            className="w-full px-4 py-3 text-gray-700 placeholder-gray-400 focus:outline-none"
-          />
-
-          {/* Auto-complete Suggestions */}
-          {showSuggestions && (
-            <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-b-lg shadow-lg z-50">
-              {suggestions.map((suggestion, index) => (
+            <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-b-lg shadow-xl z-50 min-w-[200px] font-sans">
+              {categories.map(cat => (
                 <button
-                  key={index}
-                  onClick={() => selectSuggestion(suggestion)}
-                  className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center"
+                  key={cat.name}
+                  className={`flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 font-sans ${selectedCategory === cat.name ? 'bg-blue-50' : ''}`}
+                  onClick={() => {
+                    setSelectedCategory(cat.name);
+                    setIsDropdownOpen(false);
+                  }}
                 >
-                  <Search className="h-4 w-4 mr-2 text-gray-400" />
-                  {suggestion}
+                  <cat.icon className="h-4 w-4 mr-2 text-gray-600" />
+                  {cat.name}
                 </button>
               ))}
             </div>
           )}
         </div>
-
-        {/* Filter Button */}
+        <div className="flex-1 flex items-center relative">
+          <input
+            type="text"
+            className="w-full px-4 py-3 rounded-none rounded-br-lg rounded-bl-lg sm:rounded-bl-none sm:rounded-br-lg border-0 focus:ring-0 font-sans"
+            placeholder={selectedCategory === 'Sản phẩm' ? 'Tìm kiếm sản phẩm...' : 'Tìm kiếm nhà cung cấp...'}
+            value={searchQuery}
+            onChange={e => handleInputChange(e.target.value)}
+            onKeyDown={handleKeyPress}
+            onFocus={() => updateSuggestions(searchQuery)}
+          />
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute left-0 right-0 top-full bg-white border border-gray-200 rounded-b-lg shadow-xl z-50 font-sans">
+              {suggestions.map(s => (
+                <button
+                  key={s}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 font-sans"
+                  onClick={() => selectSuggestion(s)}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <button
-          onClick={() => setShowFilters(!showFilters)}
-          className="border-l border-gray-200 px-4 py-3 hover:bg-gray-50 transition-colors flex items-center"
+          className="bg-blue-600 text-white px-6 py-3 rounded-br-lg rounded-bl-lg sm:rounded-bl-none sm:rounded-br-lg font-semibold hover:bg-blue-700 transition-colors font-sans"
+          onClick={selectedCategory === 'Sản phẩm' ? handleProductSearch : handleSearch}
         >
-          <Filter className="h-4 w-4 text-gray-600" />
-        </button>
-
-        {/* Search Button */}
-        <button
-          onClick={selectedCategory === 'Products' ? handleProductSearch : handleSearch}
-          className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 font-medium transition-colors flex items-center justify-center sm:justify-start"
-        >
-          <Search className="h-4 w-4 sm:mr-2" />
-          <span className="hidden sm:inline">Search</span>
+          Tìm kiếm
         </button>
       </div>
 
-      {/* Advanced Filters */}
-      {showFilters && (
-        <div className="mt-3 bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-w-4xl mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                <MapPin className="h-4 w-4 inline mr-1" />
-                Location
-              </label>
-              <select
-                value={filters.location}
-                onChange={(e) => setFilters({...filters, location: e.target.value})}
-                className="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
-              >
-                <option value="">All Locations</option>
-                <option value="china">China</option>
-                <option value="india">India</option>
-                <option value="vietnam">Vietnam</option>
-                <option value="usa">USA</option>
-                <option value="germany">Germany</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                <Package className="h-4 w-4 inline mr-1" />
-                Industry
-              </label>
-              <select
-                value={filters.industry}
-                onChange={(e) => setFilters({...filters, industry: e.target.value})}
-                className="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
-              >
-                <option value="">All Industries</option>
-                <option value="electronics">Electronics</option>
-                <option value="textiles">Textiles</option>
-                <option value="machinery">Machinery</option>
-                <option value="automotive">Automotive</option>
-                <option value="chemicals">Chemicals</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                <Award className="h-4 w-4 inline mr-1" />
-                Certification
-              </label>
-              <select
-                value={filters.certification}
-                onChange={(e) => setFilters({...filters, certification: e.target.value})}
-                className="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
-              >
-                <option value="">All Certifications</option>
-                <option value="iso9001">ISO 9001</option>
-                <option value="iso14001">ISO 14001</option>
-                <option value="ce">CE Certified</option>
-                <option value="fda">FDA Approved</option>
-              </select>
-            </div>
+      {/* Always-visible Filters */}
+      <div className="mt-3 bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              <MapPin className="h-4 w-4 inline mr-1" />
+              Địa điểm
+            </label>
+            <select
+              value={filters.location}
+              onChange={e => setFilters({ ...filters, location: e.target.value })}
+              className="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            >
+              <option value="">Tất cả địa điểm</option>
+              <option value="china">Trung Quốc</option>
+              <option value="india">Ấn Độ</option>
+              <option value="vietnam">Việt Nam</option>
+              <option value="usa">Mỹ</option>
+              <option value="germany">Đức</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              <Package className="h-4 w-4 inline mr-1" />
+              Ngành
+            </label>
+            <select
+              value={filters.industry}
+              onChange={e => setFilters({ ...filters, industry: e.target.value })}
+              className="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            >
+              <option value="">Tất cả ngành</option>
+              <option value="electronics">Điện tử</option>
+              <option value="textiles">Dệt may</option>
+              <option value="machinery">Máy móc</option>
+              <option value="automotive">Ô tô</option>
+              <option value="chemicals">Hóa chất</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              <Award className="h-4 w-4 inline mr-1" />
+              Chứng nhận
+            </label>
+            <select
+              value={filters.certification}
+              onChange={e => setFilters({ ...filters, certification: e.target.value })}
+              className="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            >
+              <option value="">Tất cả chứng nhận</option>
+              <option value="iso9001">ISO 9001</option>
+              <option value="iso14001">ISO 14001</option>
+              <option value="ce">CE</option>
+              <option value="fda">FDA</option>
+            </select>
           </div>
         </div>
-      )}
-
-      {/* Keyword Suggestions & Search History */}
-      {searchQuery === '' && (
-        <div className="mt-3 bg-white rounded-lg shadow-sm border border-gray-200 p-4 max-w-4xl mx-auto">
-          {/* Search History */}
-          {searchHistory.length > 0 && (
-            <div className="mb-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
-                <Clock className="h-4 w-4 mr-1" />
-                Recent Searches:
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {searchHistory.slice(0, 5).map((item, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSearchQuery(item)}
-                    className="px-3 py-1 bg-gray-50 text-gray-600 rounded-full text-sm hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center"
-                  >
-                    <Clock className="h-3 w-3 mr-1" />
-                    {item}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Popular Searches */}
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Popular Searches:</h3>
-          <div className="flex flex-wrap gap-2">
-            {['Electronics', 'Textiles', 'Machinery', 'Automotive Parts', 'LED Lights', 'Mobile Accessories'].map((keyword) => (
-              <button
-                key={keyword}
-                onClick={() => setSearchQuery(keyword)}
-                className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-blue-100 hover:text-blue-600 transition-colors"
-              >
-                {keyword}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Click outside to close dropdown */}
-      {isDropdownOpen && (
-        <div
-          className="fixed inset-0 z-0"
-          onClick={() => setIsDropdownOpen(false)}
-        />
-      )}
+      </div>
     </div>
   );
-};
+}
 
 export default SearchBar;
