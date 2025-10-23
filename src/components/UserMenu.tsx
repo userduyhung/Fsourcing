@@ -45,7 +45,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ userName, userRole }) => {
       case 'buyer':
         return '/buyer/dashboard';
       case 'seller':
-        return '/products';
+        return '/seller/dashboard';
       default:
         return '/';
     }
@@ -68,48 +68,56 @@ const UserMenu: React.FC<UserMenuProps> = ({ userName, userRole }) => {
     setIsOpen(false);
   };
 
+  // Vietnamese UI
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'Quản trị viên';
+      case 'buyer':
+        return 'Người mua';
+      case 'seller':
+        return 'Người bán';
+      default:
+        return 'Người dùng';
+    }
+  };
+
   return (
     <>
       <div className="relative" ref={menuRef}>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition-colors"
+          className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition-colors font-sans"
         >
           <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
             <User className="w-5 h-5 text-blue-600" />
           </div>
           <div className="hidden md:block text-left">
-            <div className="text-sm font-medium">{userName}</div>
-            <div className={`text-xs px-2 py-0.5 rounded-full inline-block ${getRoleBadgeColor(userRole)}`}>
-              {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
+            <div className="text-sm font-medium font-sans">{userName}</div>
+            <div className={`text-xs px-2 py-0.5 rounded-full inline-block ${getRoleBadgeColor(userRole)} font-sans`}>
+              {getRoleLabel(userRole)}
             </div>
           </div>
           <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
-
         {isOpen && (
-          <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border py-1 z-50">
+          <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border py-1 z-50 font-sans">
             <div className="px-4 py-2 border-b">
-              <div className="text-sm font-medium text-gray-900">{userName}</div>
-              <div className={`text-xs px-2 py-0.5 rounded-full inline-block mt-1 ${getRoleBadgeColor(userRole)}`}>
-                {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
+              <div className="text-sm font-medium text-gray-900 font-sans">{userName}</div>
+              <div className={`text-xs px-2 py-0.5 rounded-full inline-block mt-1 ${getRoleBadgeColor(userRole)} font-sans`}>
+                {getRoleLabel(userRole)}
               </div>
             </div>
-            
             <button
+              className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 font-sans"
               onClick={handleProfileClick}
-              className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             >
               <Settings className="w-4 h-4 mr-3" />
-              Dashboard
+              Bảng điều khiển
             </button>
-            
             <button
-              onClick={() => {
-                setShowLogoutModal(true);
-                setIsOpen(false);
-              }}
-              className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+              className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-sans"
+              onClick={() => setShowLogoutModal(true)}
             >
               <LogOut className="w-4 h-4 mr-3" />
               Đăng xuất
@@ -117,7 +125,6 @@ const UserMenu: React.FC<UserMenuProps> = ({ userName, userRole }) => {
           </div>
         )}
       </div>
-
       <LogoutModal
         isOpen={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
