@@ -6,14 +6,15 @@ interface LogoProps {
   alt?: string;
 }
 
-const Logo: React.FC<LogoProps> = ({ className = "h-8 w-8", alt = "Fsourcing Logo" }) => {
+const Logo: React.FC<LogoProps> = ({ className = "h-8 w-8", alt = "Logo Fsourcing" }) => {
   return (
     <img 
       src={logoImage} 
       alt={alt}
-      className={className}
+      className={className + " font-sans"}
+
     />
   );
-};
+}
 
 export default Logo;
