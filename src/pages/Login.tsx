@@ -156,6 +156,17 @@ const Login: React.FC = () => {
             {isLoading ? 'Signing in...' : 'Sign in'}
           </button>
 
+          {/* Nút đăng nhập với tư cách Admin luôn hiển thị */}
+          <div className="w-full flex justify-center mt-2">
+            <button
+              type="button"
+              onClick={() => navigate('/admin/login')}
+              className="w-full py-2 px-4 border border-blue-600 text-sm font-medium rounded-md text-blue-600 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Đăng nhập với tư cách Admin
+            </button>
+          </div>
+
           <div className="text-center space-y-2">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
@@ -163,7 +174,6 @@ const Login: React.FC = () => {
                 Create one here
               </Link>
             </p>
-            
             {/* Demo Credentials */}
             <div className="mt-6 p-4 bg-blue-50 rounded-lg">
               <h4 className="text-sm font-semibold text-blue-900 mb-2">Demo Accounts:</h4>
