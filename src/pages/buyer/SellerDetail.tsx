@@ -1,7 +1,7 @@
 import React from 'react';
 import { BadgeCheck, Mail, Phone, MapPin, Star, FileText, Send, Flag } from 'lucide-react';
 import { useParams } from 'react-router-dom';
-import RFQForm from '../../components/RFQForm';
+import OrderForm from '../../components/OrderForm';
 import SellerReview from '../../components/SellerReview';
 import SellerReport from '../../components/SellerReport';
 
@@ -102,7 +102,7 @@ const SellerDetail: React.FC = () => {
           <Send className="w-4 h-4 mr-2" />
           Tạo RFQ cho Seller này
         </button>
-        <RFQForm
+        <OrderForm
           isOpen={showRFQ}
           onClose={() => setShowRFQ(false)}
           sellerName={seller.companyName}
