@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { Search, Shield, Globe, TrendingUp, Users, BarChart3, Package, Star, ArrowRight, Mail, Phone, MapPin, ShoppingCart } from 'lucide-react';
 import Logo from './components/Logo';
@@ -9,14 +9,14 @@ import { ProductList } from './pages/ProductList';
 import ProductDetail from './pages/ProductDetail';
 import LoginPage from './pages/LoginPage';
 import AdminLogin from './pages/admin/AdminLogin';
-import SellerLogin from './pages/seller/SellerLogin';
+// ...existing code...
 import SellerDashboard from './pages/seller/SellerDashboard';
 import SellerForgotPassword from './pages/seller/SellerForgotPassword';
 import SellerChangePassword from './pages/seller/SellerChangePassword';
 import SellerProducts from './pages/seller/SellerProducts';
 import AddProduct from './pages/seller/AddProduct';
 import EditProduct from './pages/seller/EditProduct';
-import Register from './pages/Register';
+// ...existing code...
 import SellerRegister from './pages/seller/SellerRegister';
 
 import UnifiedRegister from './pages/UnifiedRegister';
@@ -38,7 +38,7 @@ import BuyerDashboard from './pages/buyer/BuyerDashboard';
 import BuyerProfile from './pages/buyer/BuyerProfile';
 import SellerDetail from './pages/buyer/SellerDetail';
 import SellerProfile from './pages/seller/SellerProfile';
-import BuyerRFQList from './pages/buyer/BuyerRFQList';
+import OrderList from './pages/buyer/OrderList';
 import OrderDetail from './pages/buyer/OrderDetail';
 import PaymentSuccess from './pages/buyer/PaymentSuccess';
 import { CartItem } from './types';
@@ -438,7 +438,7 @@ function App() {
           <Route path="/buyer/login" element={<LoginPage />} />
           <Route path="/seller/login" element={<LoginPage />} />
           <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/register" element={<Register />} />
+          // ...existing code...
           <Route path="/unified-register" element={<UnifiedRegister />} />
           <Route path="/about" element={<About />} />
           <Route path="/services" element={<Services />} />
@@ -458,7 +458,7 @@ function App() {
           <Route path="/buyer/change-password" element={<ChangePassword />} />
           <Route path="/buyer/dashboard" element={<BuyerDashboard />} />
           <Route path="/buyer/profile" element={<BuyerProfile />} />
-          <Route path="/buyer/rfq-list" element={<BuyerRFQList />} />
+          <Route path="/buyer/rfq-list" element={<OrderList />} />
           <Route path="/buyer/order-detail" element={<OrderDetail />} />
           <Route path="/buyer/seller-detail/:id" element={<SellerDetail />} />
           <Route path="/buyer/payment-success" element={<PaymentSuccess />} />
