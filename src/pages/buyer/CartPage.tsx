@@ -1,5 +1,3 @@
-  // Scroll to top when mount
-  React.useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, []);
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -14,7 +12,8 @@ const CartPage: React.FC<CartPageProps> = ({ cart }) => {
   const [cartState, setCartState] = React.useState<CartItem[]>(cart);
   const total = cartState.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  const handleCheckout = () => {
+  // Scroll to top when mount
+  React.useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, []);  const handleCheckout = () => {
     navigate('/buyer/checkout');
   };
 
