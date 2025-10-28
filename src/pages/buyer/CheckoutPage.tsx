@@ -1,6 +1,4 @@
-  // Scroll to top when mount
-  React.useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, []);
-import React, { useState } from 'react';
+  import React, { useState } from 'react';
 import { CartItem } from '../../types';
 import QRCode from 'react-qr-code';
 
@@ -9,6 +7,8 @@ interface CheckoutPageProps {
 }
 
 const CheckoutPage: React.FC<CheckoutPageProps> = ({ cart }) => {
+  // Scroll to top when mount
+  React.useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, []);
 
   const [address, setAddress] = useState('');
   const [showPayment, setShowPayment] = useState(false);
