@@ -72,12 +72,12 @@ const Login: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <Link to="/" className="inline-flex items-center text-2xl font-bold text-blue-600 mb-6">
+          <Link to="/" className="inline-flex items-center text-2xl font-bold text-blue-600 mb-6 font-sans">
             <span className="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-2 text-sm">F</span>
             Fsourcing
           </Link>
-          <h2 className="text-3xl font-extrabold text-gray-900">Sign in to your account</h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <h2 className="text-3xl font-extrabold text-gray-900 font-sans">Sign in to your account</h2>
+          <p className="mt-2 text-sm text-gray-600 font-sans">
             Welcome back! Please sign in to continue
           </p>
         </div>
@@ -85,21 +85,21 @@ const Login: React.FC = () => {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-md p-4">
-              <p className="text-red-600 text-sm">{error}</p>
+              <p className="text-red-600 text-sm font-sans">{error}</p>
             </div>
           )}
 
           <div className="space-y-4">
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1 font-sans">Email Address</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-sans"
                   placeholder="Enter your email address"
                 />
               </div>
@@ -107,14 +107,14 @@ const Login: React.FC = () => {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1 font-sans">Password</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-12 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-10 pr-12 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-sans"
                   placeholder="Enter your password"
                 />
                 <button
@@ -136,13 +136,13 @@ const Login: React.FC = () => {
                 type="checkbox"
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900 font-sans">
                 Remember me
               </label>
             </div>
 
             <div className="text-sm">
-              <Link to="/buyer/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
+              <Link to="/buyer/forgot-password" className="font-medium text-blue-600 hover:text-blue-500 font-sans">
                 Forgot your password?
               </Link>
             </div>
@@ -151,7 +151,7 @@ const Login: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-sans"
           >
             {isLoading ? 'Signing in...' : 'Sign in'}
           </button>
@@ -161,34 +161,34 @@ const Login: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate('/admin/login')}
-              className="w-full py-2 px-4 border border-blue-600 text-sm font-medium rounded-md text-blue-600 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="w-full py-2 px-4 border border-blue-600 text-sm font-medium rounded-md text-blue-600 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 font-sans"
             >
               Đăng nhập với tư cách Admin
             </button>
           </div>
 
           <div className="text-center space-y-2">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 font-sans">
               Don't have an account?{' '}
-              <Link to="/join" className="font-medium text-blue-600 hover:text-blue-500">
+              <Link to="/join" className="font-medium text-blue-600 hover:text-blue-500 font-sans">
                 Create one here
               </Link>
             </p>
             {/* Demo Credentials */}
             <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <h4 className="text-sm font-semibold text-blue-900 mb-2">Demo Accounts:</h4>
+              <h4 className="text-sm font-semibold text-blue-900 mb-2 font-sans">Demo Accounts:</h4>
               <div className="space-y-2 text-xs">
                 <div className="bg-white p-2 rounded border">
-                  <p className="font-semibold text-blue-800">Admin:</p>
-                  <p className="text-blue-700">admin@fsourcing.com / admin123</p>
+                  <p className="font-semibold text-blue-800 font-sans">Admin:</p>
+                  <p className="text-blue-700 font-sans">admin@fsourcing.com / admin123</p>
                 </div>
                 <div className="bg-white p-2 rounded border">
-                  <p className="font-semibold text-blue-800">Buyer:</p>
-                  <p className="text-blue-700">buyer@demo.com / demo123</p>
+                  <p className="font-semibold text-blue-800 font-sans">Buyer:</p>
+                  <p className="text-blue-700 font-sans">buyer@demo.com / demo123</p>
                 </div>
                 <div className="bg-white p-2 rounded border">
-                  <p className="font-semibold text-blue-800">Seller:</p>
-                  <p className="text-blue-700">seller@demo.com / demo123</p>
+                  <p className="font-semibold text-blue-800 font-sans">Seller:</p>
+                  <p className="text-blue-700 font-sans">seller@demo.com / seller123</p>
                 </div>
               </div>
             </div>
