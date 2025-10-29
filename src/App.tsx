@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { Search, Shield, Globe, TrendingUp, Users, BarChart3, Package, Star, ArrowRight, Mail, Phone, MapPin, ShoppingCart } from 'lucide-react';
+import { Search, Shield, Globe, TrendingUp, Users, BarChart3, Package, Star, ArrowRight, Mail, Phone, MapPin, ShoppingCart, MessageCircle } from 'lucide-react';
 import Logo from './components/Logo';
 import SearchBar from './components/SearchBar';
 import ProductShowcase from './components/ProductShowcase';
 import UserMenu from './components/UserMenu';
+import BuyerProtectedRoute from './components/BuyerProtectedRoute';
 import { ProductList } from './pages/ProductList';
 import ProductDetail from './pages/ProductDetail';
 import LoginPage from './pages/LoginPage';
@@ -39,8 +40,11 @@ import BuyerProfile from './pages/buyer/BuyerProfile';
 import SellerDetail from './pages/buyer/SellerDetail';
 import SellerProfile from './pages/seller/SellerProfile';
 import OrderList from './pages/buyer/OrderList';
+import SellerOrderList from './pages/seller/OrderList';
+import SellerOrderDetail from './pages/seller/OrderDetail';
 import OrderDetail from './pages/buyer/OrderDetail';
 import PaymentSuccess from './pages/buyer/PaymentSuccess';
+import ChatPage from './pages/buyer/ChatPage';
 import { CartItem } from './types';
 import { useParams } from 'react-router-dom';
 
@@ -140,12 +144,20 @@ function App() {
                 {user && user.role ? (
                   <>
                     {user.role === 'buyer' && (
-                      <Link to="/cart" className="relative">
-                        <ShoppingCart className="h-6 w-6 text-blue-600" />
-                        {cart.length > 0 && (
-                          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">{cart.length}</span>
-                        )}
-                      </Link>
+                      <>
+                        <Link to="/buyer/chat" className="relative text-gray-600 hover:text-blue-600 transition-colors" title="Tin nhắn">
+                          <MessageCircle className="h-6 w-6" />
+                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                            3
+                          </span>
+                        </Link>
+                        <Link to="/cart" className="relative">
+                          <ShoppingCart className="h-6 w-6 text-blue-600" />
+                          {cart.length > 0 && (
+                            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">{cart.length}</span>
+                          )}
+                        </Link>
+                      </>
                     )}
                     <UserMenu userName={user.name} userRole={user.role} />
                   </>
@@ -206,6 +218,7 @@ function App() {
                 </div>
               </section>
               <ProductShowcase addToCart={addToCart} />
+              
               {/* Các section chỉ hiển thị khi chưa đăng nhập Buyer */}
               {!(user && user.role === 'buyer') && (
                 <>
@@ -227,6 +240,13 @@ function App() {
                           </div>
                           <h3 className="text-xl font-semibold text-gray-900 mb-2 font-sans">Nhà cung cấp đã xác thực</h3>
                           <p className="text-gray-600 font-sans">Tất cả nhà cung cấp đều được kiểm duyệt nghiêm ngặt để đảm bảo uy tín và chất lượng.</p>
+                        </div>
+                        <div className="text-center group">
+                          <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-purple-200 transition-colors">
+                            <MessageCircle className="h-8 w-8 text-purple-600" />
+                          </div>
+                          <h3 className="text-xl font-semibold text-gray-900 mb-2 font-sans">Chat trực tiếp</h3>
+                          <p className="text-gray-600 font-sans">Liên hệ và trao đổi trực tiếp với nhà cung cấp qua hệ thống chat tích hợp.</p>
                         </div>
                         <div className="text-center group">
                           <div className="bg-teal-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-teal-200 transition-colors">
@@ -439,6 +459,7 @@ function App() {
           <Route path="/seller/login" element={<LoginPage />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           // ...existing code...
+          <Route path="/register" element={<UnifiedRegister />} />
           <Route path="/unified-register" element={<UnifiedRegister />} />
           <Route path="/about" element={<About />} />
           <Route path="/services" element={<Services />} />
@@ -446,6 +467,8 @@ function App() {
           <Route path="/seller/dashboard" element={<SellerDashboard />} />
           <Route path="/seller/products" element={<SellerProducts />} />
           <Route path="/seller/profile" element={<SellerProfile />} />
+          <Route path="/seller/orders" element={<SellerOrderList />} />
+          <Route path="/seller/order-detail/:id" element={<SellerOrderDetail />} />
           <Route path="/seller/add-product" element={<AddProduct />} />
           <Route path="/seller/edit-product/:id" element={
             <EditProductWrapper />
@@ -455,19 +478,60 @@ function App() {
           <Route path="/seller/change-password" element={<SellerChangePassword />} />
           <Route path="/buyer/register" element={<BuyerRegister />} />
           <Route path="/buyer/forgot-password" element={<ForgotPassword />} />
-          <Route path="/buyer/change-password" element={<ChangePassword />} />
-          <Route path="/buyer/dashboard" element={<BuyerDashboard />} />
-          <Route path="/buyer/profile" element={<BuyerProfile />} />
-          <Route path="/buyer/rfq-list" element={<OrderList />} />
-          <Route path="/buyer/order-detail" element={<OrderDetail />} />
-          <Route path="/buyer/seller-detail/:id" element={<SellerDetail />} />
-          <Route path="/buyer/payment-success" element={<PaymentSuccess />} />
+          <Route path="/buyer/change-password" element={
+            <BuyerProtectedRoute>
+              <ChangePassword />
+            </BuyerProtectedRoute>
+          } />
+          <Route path="/buyer/dashboard" element={
+            <BuyerProtectedRoute>
+              <BuyerDashboard />
+            </BuyerProtectedRoute>
+          } />
+          <Route path="/buyer/profile" element={
+            <BuyerProtectedRoute>
+              <BuyerProfile />
+            </BuyerProtectedRoute>
+          } />
+          <Route path="/buyer/chat" element={
+            <BuyerProtectedRoute>
+              <ChatPage />
+            </BuyerProtectedRoute>
+          } />
+          <Route path="/buyer/rfq-list" element={
+            <BuyerProtectedRoute>
+              <OrderList />
+            </BuyerProtectedRoute>
+          } />
+          <Route path="/buyer/order-detail" element={
+            <BuyerProtectedRoute>
+              <OrderDetail />
+            </BuyerProtectedRoute>
+          } />
+          <Route path="/buyer/seller-detail/:id" element={
+            <BuyerProtectedRoute>
+              <SellerDetail />
+            </BuyerProtectedRoute>
+          } />
+          <Route path="/buyer/payment-success" element={
+            <BuyerProtectedRoute>
+              <PaymentSuccess />
+            </BuyerProtectedRoute>
+          } />
           <Route path="/admin/*" element={<AdminLayout />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/user-management" element={<UserManagement />} />
           <Route path="/admin/seller-approval" element={<SellerApproval />} />
-          <Route path="/cart" element={<CartPage cart={cart} />} />
-          <Route path="/buyer/checkout" element={<CheckoutPage cart={cart} />} />
+          <Route path="/cart" element={
+            <BuyerProtectedRoute>
+              <CartPage cart={cart} />
+            </BuyerProtectedRoute>
+          } />
+          <Route path="/buyer/checkout" element={
+            <BuyerProtectedRoute>
+              <CheckoutPage cart={cart} />
+            </BuyerProtectedRoute>
+          } />
         </Routes>
         {/* Footer */}
         <footer className="bg-slate-dark text-white pt-16 pb-8">
