@@ -1,6 +1,6 @@
 import React from 'react';
-import { BadgeCheck, Mail, Phone, MapPin, Star, FileText, Send, Flag } from 'lucide-react';
-import { useParams } from 'react-router-dom';
+import { BadgeCheck, Mail, Phone, MapPin, Send, MessageCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import OrderForm from '../../components/OrderForm';
 import SellerReview from '../../components/SellerReview';
 import SellerReport from '../../components/SellerReport';
@@ -29,7 +29,7 @@ const sellerDemo = {
 const SellerDetail: React.FC = () => {
   // Scroll to top when mount
   React.useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, []);
-  const { id } = useParams();
+  const navigate = useNavigate();
   const seller = sellerDemo; // Replace with fetch by id in real app
   const [showRFQ, setShowRFQ] = React.useState(false);
 
@@ -97,10 +97,20 @@ const SellerDetail: React.FC = () => {
       </div>
 
       {/* RFQ Button */}
-      <div className="mb-8">
-        <button className="bg-blue-600 text-white px-6 py-2 rounded-lg flex items-center hover:bg-blue-700" onClick={() => setShowRFQ(true)}>
+      <div className="mb-8 flex gap-4">
+        <button 
+          className="bg-blue-600 text-white px-6 py-2 rounded-lg flex items-center hover:bg-blue-700" 
+          onClick={() => setShowRFQ(true)}
+        >
           <Send className="w-4 h-4 mr-2" />
           Tạo RFQ cho Seller này
+        </button>
+        <button 
+          className="bg-purple-600 text-white px-6 py-2 rounded-lg flex items-center hover:bg-purple-700" 
+          onClick={() => navigate('/buyer/chat')}
+        >
+          <MessageCircle className="w-4 h-4 mr-2" />
+          Chat với Seller
         </button>
         <OrderForm
           isOpen={showRFQ}
