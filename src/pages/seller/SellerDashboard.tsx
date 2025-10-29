@@ -14,8 +14,8 @@ const SellerDashboard: React.FC = () => {
 
   return (
     <div className="bg-[#f8ecd7] min-h-screen font-sans">
-      <div className="max-w-4xl mx-auto py-10">
-  <h2 className="text-2xl font-bold mb-6">Bảng điều khiển Người bán</h2>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <h2 className="text-2xl font-bold mb-6">Bảng điều khiển Người bán</h2>
         <div className="mb-8 bg-white rounded-lg shadow p-6 flex flex-col sm:flex-row items-center justify-between">
           <div>
             <div className="font-semibold text-lg">{sellerInfo.name}</div>

@@ -8,7 +8,8 @@ import {
   TrendingUp,
   Users,
   Package,
-  Clock
+  Clock,
+  MessageCircle
 } from 'lucide-react';
 
 
@@ -20,7 +21,7 @@ const BuyerDashboard: React.FC = () => {
   const stats = [
     { title: 'RFQ đang hoạt động', value: '8', change: '+2 tuần này', icon: FileText, color: 'bg-gradient-to-r from-blue-500 to-blue-400' },
     { title: 'Nhà cung cấp đã lưu', value: '12', change: '+3 mới', icon: Users, color: 'bg-gradient-to-r from-green-500 to-green-400' },
-    { title: 'Tổng đánh giá', value: '24', change: 'Trung bình 4.8 sao', icon: Star, color: 'bg-gradient-to-r from-yellow-500 to-yellow-400' },
+    { title: 'Tin nhắn', value: '3', change: 'Chưa đọc', icon: MessageCircle, color: 'bg-gradient-to-r from-purple-500 to-purple-400', link: '/buyer/chat' },
     { title: 'Thông báo', value: '3', change: 'Chưa đọc', icon: Bell, color: 'bg-gradient-to-r from-red-500 to-pink-400' }
   ];
 
@@ -63,7 +64,7 @@ const BuyerDashboard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 pt-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Hero Section */}
       <div className="relative rounded-xl overflow-hidden mb-6">
         <div className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 py-10 px-8 text-white shadow-lg">
@@ -83,8 +84,8 @@ const BuyerDashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
-          return (
-            <div key={index} className="rounded-xl shadow-lg p-6 bg-white hover:scale-[1.03] transition-transform border border-gray-100">
+          const StatCard = (
+            <div key={index} className="rounded-xl shadow-lg p-6 bg-white hover:scale-[1.03] transition-transform border border-gray-100 cursor-pointer">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-gray-500 mb-1">{stat.title}</p>
@@ -97,6 +98,8 @@ const BuyerDashboard: React.FC = () => {
               </div>
             </div>
           );
+          
+          return stat.link ? <Link to={stat.link} key={index}>{StatCard}</Link> : StatCard;
         })}
       </div>
 
@@ -162,6 +165,13 @@ const BuyerDashboard: React.FC = () => {
             >
               <Search className="w-10 h-10 mx-auto text-green-500 mb-2" />
               <span className="text-base font-semibold text-gray-700">Tìm nhà cung cấp</span>
+            </Link>
+            <Link
+              to="/buyer/chat"
+              className="p-6 border-2 border-dashed border-purple-300 rounded-xl hover:border-purple-500 hover:bg-purple-50 text-center transition-colors shadow-sm"
+            >
+              <MessageCircle className="w-10 h-10 mx-auto text-purple-500 mb-2" />
+              <span className="text-base font-semibold text-gray-700">Tin nhắn</span>
             </Link>
             <Link
               to="/buyer/order-detail"
