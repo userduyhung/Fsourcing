@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -10,7 +10,8 @@ import {
   Flag,
   LogOut,
   Menu,
-  X
+  X,
+  MessageCircle
 } from 'lucide-react';
 
 const BuyerLayout: React.FC = () => {
@@ -18,13 +19,31 @@ const BuyerLayout: React.FC = () => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
+  // Kiểm tra authentication khi component mount
+  useEffect(() => {
+    const buyerToken = localStorage.getItem('buyerToken');
+    const userRole = localStorage.getItem('userRole');
+
+    if (!buyerToken || userRole !== 'buyer') {
+      navigate('/login', { replace: true });
+    }
+  }, [navigate]);
+
   // Get buyer profile from localStorage
   const buyerProfile = JSON.parse(localStorage.getItem('buyerProfile') || '{}');
 
   const handleLogout = () => {
+    // Xóa tất cả thông tin buyer
     localStorage.removeItem('buyerToken');
     localStorage.removeItem('buyerProfile');
-    navigate('/login');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userRole');
+    
+    // Dispatch event để App.tsx cập nhật state
+    window.dispatchEvent(new Event('userLoggedIn'));
+    
+    // Redirect về trang login
+    navigate('/login', { replace: true });
   };
 
   const menuItems = [
@@ -32,6 +51,7 @@ const BuyerLayout: React.FC = () => {
     { path: '/buyer/profile', label: 'My Profile', icon: User },
     { path: '/buyer/sellers', label: 'Find Sellers', icon: Search },
     { path: '/buyer/rfq', label: 'My RFQs', icon: FileText },
+    { path: '/buyer/chat', label: 'Messages', icon: MessageCircle },
     { path: '/buyer/notifications', label: 'Notifications', icon: Bell },
     { path: '/buyer/reviews', label: 'My Reviews', icon: Star },
     { path: '/buyer/reports', label: 'Reports', icon: Flag },
@@ -141,6 +161,25 @@ const BuyerLayout: React.FC = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Floating Chat Button */}
+      {location.pathname !== '/buyer/chat' && (
+        <Link
+          to="/buyer/chat"
+          className="fixed bottom-6 right-6 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-all hover:scale-110 z-50 group"
+          title="Tin nhắn"
+        >
+          <MessageCircle className="w-6 h-6" />
+          {/* Badge for unread messages */}
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center animate-pulse">
+            3
+          </span>
+          {/* Tooltip */}
+          <span className="absolute bottom-full right-0 mb-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+            Tin nhắn (3 chưa đọc)
+          </span>
+        </Link>
+      )}
     </div>
   );
 };
