@@ -6,6 +6,7 @@ import SearchBar from './components/SearchBar';
 import ProductShowcase from './components/ProductShowcase';
 import UserMenu from './components/UserMenu';
 import BuyerProtectedRoute from './components/BuyerProtectedRoute';
+import ScrollToTop from './components/ScrollToTop';
 import { ProductList } from './pages/ProductList';
 import ProductDetail from './pages/ProductDetail';
 import LoginPage from './pages/LoginPage';
@@ -19,6 +20,7 @@ import AddProduct from './pages/seller/AddProduct';
 import EditProduct from './pages/seller/EditProduct';
 // ...existing code...
 import SellerRegister from './pages/seller/SellerRegister';
+import SellerNotifications from './pages/seller/SellerNotifications';
 
 import UnifiedRegister from './pages/UnifiedRegister';
 import About from './pages/About';
@@ -123,6 +125,7 @@ function App() {
 
   return (
     <Router>
+      <ScrollToTop />
       <div className="min-h-screen bg-white">
         {/* Header */}
         <header className="bg-white border-b border-gray-200">
@@ -197,10 +200,10 @@ function App() {
                     </div>
                     {!(user && user.role === 'buyer') && (
                       <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-                        <button className="bg-blue-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-all transform hover:scale-105 shadow-lg font-sans">
+                        <Link to="/register" className="bg-blue-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-all transform hover:scale-105 shadow-lg font-sans inline-block text-center">
                           Bắt đầu tìm nguồn hàng
-                        </button>
-                        <Link to="/supplier-register" className="border-2 border-blue-600 text-blue-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-600 hover:text-white transition-colors font-sans">
+                        </Link>
+                        <Link to="/register" className="border-2 border-blue-600 text-blue-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-600 hover:text-white transition-colors font-sans inline-block text-center">
                           Trở thành nhà cung cấp
                         </Link>
                       </div>
@@ -233,7 +236,7 @@ function App() {
                           Tất cả những gì bạn cần để mua hàng hiệu quả và phát triển kinh doanh toàn cầu
                         </p>
                       </div>
-                      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                      <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8">
                         <div className="text-center group">
                           <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-200 transition-colors">
                             <Shield className="h-8 w-8 text-blue-600" />
@@ -288,6 +291,7 @@ function App() {
                       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {[
                           {
+                            id: 1,
                             name: "TechManufacturing Co.",
                             country: "China",
                             products: "Electronics & Components",
@@ -296,6 +300,7 @@ function App() {
                             image: "https://images.pexels.com/photos/3862132/pexels-photo-3862132.jpeg"
                           },
                           {
+                            id: 2,
                             name: "Global Textiles Ltd.",
                             country: "India",
                             products: "Clothing & Accessories",
@@ -304,6 +309,7 @@ function App() {
                             image: "https://images.pexels.com/photos/7876665/pexels-photo-7876665.jpeg"
                           },
                           {
+                            id: 3,
                             name: "Industrial Solutions Inc.",
                             country: "Germany",
                             products: "Machinery & Equipment",
@@ -312,6 +318,7 @@ function App() {
                             image: "https://images.pexels.com/photos/3862373/pexels-photo-3862373.jpeg"
                           },
                           {
+                            id: 4,
                             name: "Green Energy Systems",
                             country: "USA",
                             products: "Renewable Energy",
@@ -320,14 +327,16 @@ function App() {
                             image: "https://images.pexels.com/photos/2800832/pexels-photo-2800832.jpeg"
                           },
                           {
+                            id: 5,
                             name: "Precision Parts Co.",
                             country: "Japan",
                             products: "Auto Parts & Accessories",
                             rating: 4.8,
                             verified: true,
-                            image: "https://images.pexels.com/photos/3846080/pexels-photo-3846080.jpeg"
+                            image: "https://www.shutterstock.com/image-illustration/car-parts-auto-spare-isolated-600nw-2283939101.jpg"
                           },
                           {
+                            id: 6,
                             name: "Beauty & Care International",
                             country: "South Korea",
                             products: "Cosmetics & Personal Care",
@@ -335,8 +344,12 @@ function App() {
                             verified: true,
                             image: "https://images.pexels.com/photos/3018841/pexels-photo-3018841.jpeg"
                           }
-                        ].map((supplier, index) => (
-                          <div key={index} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group cursor-pointer">
+                        ].map((supplier) => (
+                          <Link
+                            key={supplier.id}
+                            to={`/seller-detail/${supplier.id}`}
+                            className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group cursor-pointer block"
+                          >
                             <div className="relative h-48">
                               <img
                                 src={supplier.image}
@@ -361,14 +374,14 @@ function App() {
                                 <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
                               </div>
                             </div>
-                          </div>
+                          </Link>
                         ))}
                       </div>
                       
                       <div className="text-center mt-12">
-                        <button className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold font-sans">
+                        <Link to="/register" className="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold font-sans">
                           Xem tất cả nhà cung cấp
-                        </button>
+                        </Link>
                       </div>
                     </div>
                   </section>
@@ -400,9 +413,9 @@ function App() {
                             </div>
                           </div>
                           
-                          <button className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold font-sans">
+                          <Link to="/register" className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold font-sans">
                             Dùng thử bảng điều khiển
-                          </button>
+                          </Link>
                         </div>
                         
                         <div className="relative">
@@ -439,12 +452,12 @@ function App() {
                         Hàng ngàn doanh nghiệp đã tin dùng Fsourcing để tối ưu hóa mua hàng toàn cầu.
                       </p>
                       <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                        <button className="bg-white text-blue-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-50 transition-colors font-sans">
+                        <Link to="/register" className="bg-white text-blue-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-50 transition-colors font-sans inline-block text-center">
                           Dùng thử miễn phí
-                        </button>
-                        <button className="border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors font-sans">
+                        </Link>
+                        <Link to="/register" className="border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors font-sans inline-block text-center">
                           Đặt lịch demo
-                        </button>
+                        </Link>
                       </div>
                     </div>
                   </section>
@@ -467,6 +480,7 @@ function App() {
           <Route path="/seller/dashboard" element={<SellerDashboard />} />
           <Route path="/seller/products" element={<SellerProducts />} />
           <Route path="/seller/profile" element={<SellerProfile />} />
+          <Route path="/seller/notifications" element={<SellerNotifications />} />
           <Route path="/seller/orders" element={<SellerOrderList />} />
           <Route path="/seller/order-detail/:id" element={<SellerOrderDetail />} />
           <Route path="/seller/add-product" element={<AddProduct />} />
@@ -508,11 +522,8 @@ function App() {
               <OrderDetail />
             </BuyerProtectedRoute>
           } />
-          <Route path="/buyer/seller-detail/:id" element={
-            <BuyerProtectedRoute>
-              <SellerDetail />
-            </BuyerProtectedRoute>
-          } />
+          <Route path="/buyer/seller-detail/:id" element={<SellerDetail />} />
+          <Route path="/seller-detail/:id" element={<SellerDetail />} />
           <Route path="/buyer/payment-success" element={
             <BuyerProtectedRoute>
               <PaymentSuccess />
