@@ -69,13 +69,15 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
   };
 
   const handleSearch = () => {
-    if (!searchQuery.trim()) return;
-    
-    saveToHistory(searchQuery);
+    // Save to history only if there's a query
+    if (searchQuery.trim()) {
+      saveToHistory(searchQuery);
+    }
     setShowSuggestions(false);
-    
+
     // Simulate API call - replace with real search logic
-    alert(`Tìm kiếm "${searchQuery}" trong ${selectedCategory}\nĐịa điểm: ${filters.location || 'Tất cả'}\nNgành: ${filters.industry || 'Tất cả'}\nChứng nhận: ${filters.certification || 'Tất cả'}`);
+    const query = searchQuery.trim() || 'Tất cả';
+    alert(`Tìm kiếm "${query}" trong ${selectedCategory}\nĐịa điểm: ${filters.location || 'Tất cả'}\nNgành: ${filters.industry || 'Tất cả'}\nChứng nhận: ${filters.certification || 'Tất cả'}`);
   };
 
   const handleInputChange = (value: string) => {
@@ -100,12 +102,16 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
 
   // --- Product Search Integration ---
   const handleProductSearch = () => {
-    if (!searchQuery.trim()) return;
-    // Save to history
-    saveToHistory(searchQuery);
+    // Save to history only if there's a query
+    if (searchQuery.trim()) {
+      saveToHistory(searchQuery);
+    }
     setShowSuggestions(false);
-    // Navigate to /products with search query
-    window.location.href = `/products?search=${encodeURIComponent(searchQuery)}`;
+    // Navigate to /products with search query (or without if empty)
+    const url = searchQuery.trim()
+      ? `/products?search=${encodeURIComponent(searchQuery)}`
+      : `/products`;
+    window.location.href = url;
   };
 
   return (
