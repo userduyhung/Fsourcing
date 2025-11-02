@@ -25,6 +25,7 @@ import SellerNotifications from './pages/seller/SellerNotifications';
 import UnifiedRegister from './pages/UnifiedRegister';
 import About from './pages/About';
 import Services from './pages/Services';
+import SuccessStories from './pages/SuccessStories';
 import ChatWidget from './components/ChatWidget';
 import CartModal from './components/CartModal';
 import CartPage from './pages/buyer/CartPage';
@@ -476,6 +477,7 @@ function App() {
           <Route path="/unified-register" element={<UnifiedRegister />} />
           <Route path="/about" element={<About />} />
           <Route path="/services" element={<Services />} />
+          <Route path="/success-stories" element={<SuccessStories />} />
           <Route path="/seller/register" element={<SellerRegister />} />
           <Route path="/seller/dashboard" element={<SellerDashboard />} />
           <Route path="/seller/products" element={<SellerProducts />} />
@@ -588,7 +590,7 @@ function App() {
                   <li><a href="#" className="text-gray-400 hover:text-white transition-colors font-body font-sans">Bán hàng trên Fsourcing</a></li>
                   <li><a href="#" className="text-gray-400 hover:text-white transition-colors font-body font-sans">Quyền lợi thành viên</a></li>
                   <li><a href="#" className="text-gray-400 hover:text-white transition-colors font-body font-sans">Công cụ tiếp thị</a></li>
-                  <li><a href="#" className="text-gray-400 hover:text-white transition-colors font-body font-sans">Câu chuyện thành công</a></li>
+                  <li><Link to="/success-stories" className="text-gray-400 hover:text-white transition-colors font-body font-sans">Câu chuyện thành công</Link></li>
                 </ul>
               </div>
 
