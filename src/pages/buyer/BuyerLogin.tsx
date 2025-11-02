@@ -39,6 +39,8 @@ const BuyerLogin: React.FC = () => {
     setTimeout(() => {
       if (formData.email === 'buyer@demo.com' && formData.password === 'demo123') {
         localStorage.setItem('buyerToken', 'mock-buyer-token');
+        localStorage.setItem('userName', 'John Buyer');
+        localStorage.setItem('userRole', 'buyer');
         localStorage.setItem('buyerProfile', JSON.stringify({
           id: 1,
           fullName: 'John Buyer',
@@ -49,8 +51,10 @@ const BuyerLogin: React.FC = () => {
           joinDate: '2024-01-15T00:00:00Z'
         }));
         
+        window.dispatchEvent(new Event('userLoggedIn'));
         setIsLoading(false);
-          navigate('/buyer/dashboard');      } else {
+        navigate('/buyer/dashboard');
+      } else {
         setIsLoading(false);
         setErrors({ general: 'Invalid email or password' });
       }

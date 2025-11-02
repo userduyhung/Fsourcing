@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 
 const demoCredentials = {
@@ -42,6 +42,8 @@ const LoginPage: React.FC = () => {
           localStorage.setItem('userRole', cred.role);
         } else if (role === 'buyer') {
           localStorage.setItem('buyerToken', 'mock-buyer-token');
+          localStorage.setItem('userName', cred.name);
+          localStorage.setItem('userRole', cred.role);
           localStorage.setItem('buyerProfile', JSON.stringify({
             id: 1,
             fullName: cred.name,
@@ -72,6 +74,17 @@ const LoginPage: React.FC = () => {
     if (errors[name] || errors.general) {
       setErrors(prev => ({ ...prev, [name]: '', general: '' }));
     }
+  };
+
+  // Hàm tự động fill thông tin demo
+  const handleFillDemoCredentials = () => {
+    const cred = demoCredentials[role];
+    setFormData({
+      email: cred.email,
+      password: cred.password
+    });
+    // Xóa errors nếu có
+    setErrors({});
   };
 
   return (
@@ -192,8 +205,12 @@ const LoginPage: React.FC = () => {
                 <Link to="/seller/register" className="font-medium text-blue-600 hover:text-blue-500 font-sans">Đăng ký ngay</Link>
               </p>
             )}
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-              <p className="text-xs text-blue-800 font-semibold font-sans">Demo Credentials:</p>
+            <div 
+              className="mt-4 p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors border-2 border-transparent hover:border-blue-300"
+              onClick={handleFillDemoCredentials}
+              title="Click để tự động điền thông tin đăng nhập"
+            >
+              <p className="text-xs text-blue-800 font-semibold font-sans">Demo Credentials: (Click để tự động điền)</p>
               <p className="text-xs text-blue-700 font-sans">Email: {demoCredentials[role].email}</p>
               <p className="text-xs text-blue-700 font-sans">Password: {demoCredentials[role].password}</p>
             </div>
