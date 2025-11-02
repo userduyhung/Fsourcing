@@ -8,8 +8,11 @@ const ChatWidget: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, open]);
+    if (open && messagesEndRef.current) {
+      // Scroll trong container chat, không ảnh hưởng đến trang chính
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+  }, [messages]);
 
   const sendMessage = (text: string) => {
     if (!text.trim()) return;
@@ -65,10 +68,12 @@ const ChatWidget: React.FC = () => {
         </div>
       ) : (
         <button
-          className="bg-blue-600 text-white rounded-full shadow-lg p-4 hover:bg-blue-700 font-sans"
+          className="bg-blue-600 text-white rounded-full shadow-lg p-4 hover:bg-blue-700 transition-colors"
           onClick={() => setOpen(true)}
+          title="Hỗ trợ trực tuyến"
         >
-          Hỗ trợ        </button>
+          <MessageCircle className="h-6 w-6" />
+        </button>
       )}
 
     </div>

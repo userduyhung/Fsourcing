@@ -22,7 +22,9 @@ interface Conversation {
 
 const ChatPage: React.FC = () => {
   // Scroll to top when mount
-  React.useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, []);
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, []);
 
   const [conversations, setConversations] = useState<Conversation[]>([
     {
@@ -95,6 +97,7 @@ const ChatPage: React.FC = () => {
   const [showConversationList, setShowConversationList] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isInitialMount = useRef(true);
+  const previousMessageCount = useRef(messages.length);
 
   // Check mobile view
   useEffect(() => {
@@ -110,9 +113,15 @@ const ChatPage: React.FC = () => {
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
+      previousMessageCount.current = messages.length;
       return;
     }
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Chỉ scroll khi có tin nhắn mới được thêm vào
+    if (messages.length > previousMessageCount.current && messagesEndRef.current) {
+      previousMessageCount.current = messages.length;
+      // Scroll trong container chat, không ảnh hưởng đến trang chính
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
   }, [messages]);
 
   const handleSendMessage = () => {
