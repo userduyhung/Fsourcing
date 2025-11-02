@@ -187,12 +187,12 @@ function App() {
               <section className="bg-gradient-to-br from-blue-50 to-indigo-100 pt-16 pb-20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                   <div className="text-center">
-                    <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6 font-sans">
-                      Kết nối với nhà cung cấp uy tín
-                      <span className="text-blue-600"> trên toàn cầu</span>
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 font-sans">
+                      <span className="inline-block">Kết nối với nhà cung cấp uy tín</span>
+                      <span className="text-blue-600 inline-block"> trên toàn cầu</span>
                     </h1>
                     <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto font-sans">
-                      Khám phá hàng triệu sản phẩm từ các nhà sản xuất đáng tin cậy. Đơn giản hóa quy trình mua hàng với nền tảng B2B thông minh.
+                      Khám phá hàng triệu sản phẩm từ các nhà sản xuất đáng tin cậy. Đơn giản hóa <span className="inline-block">quy trình</span> mua hàng với nền tảng B2B thông minh.
                     </p>
                     {/* Search Bar */}
                     <div className="mb-12">
