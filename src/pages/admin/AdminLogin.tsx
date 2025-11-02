@@ -9,6 +9,12 @@ const AdminLogin: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
+  const handleDemoClick = () => {
+    setEmail('admin@fsourcing.com');
+    setPassword('admin123');
+    setError('');
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -73,9 +79,14 @@ const AdminLogin: React.FC = () => {
         </form>
         <div className="mt-6 p-4 bg-blue-50 rounded-lg">
           <h4 className="text-sm font-semibold text-blue-900 mb-2">Tài khoản demo quản trị:</h4>
-          <div className="bg-white p-2 rounded border text-xs">
+          <div
+            onClick={handleDemoClick}
+            className="bg-white p-2 rounded border text-xs cursor-pointer hover:bg-blue-50 hover:border-blue-400 transition-colors"
+            title="Click để tự động điền thông tin"
+          >
             <span className="font-semibold text-blue-800">admin@fsourcing.com / admin123</span>
           </div>
+          <p className="text-xs text-gray-600 mt-2 italic">💡 Click vào ô trên để tự động điền thông tin</p>
         </div>
       </div>
     </div>
