@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import authService from '../services/authService';
 
 const demoCredentials = {
   buyer: { email: 'buyer@demo.com', password: 'demo123', name: 'John Buyer', role: 'buyer', dashboard: '/buyer/dashboard' },
@@ -14,6 +15,8 @@ const LoginPage: React.FC = () => {
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo = (location.state as any)?.from?.pathname || '/';
 
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
@@ -33,13 +36,26 @@ const LoginPage: React.FC = () => {
     e.preventDefault();
     if (!validateForm()) return;
     setIsLoading(true);
-    setTimeout(() => {
+    try {
       const cred = demoCredentials[role];
+
+      // If user used demo credentials, keep previous mock behavior
       if (formData.email === cred.email && formData.password === cred.password) {
         if (role === 'seller') {
           localStorage.setItem('sellerToken', 'mock-seller-token');
           localStorage.setItem('userName', cred.name);
           localStorage.setItem('userRole', cred.role);
+          // One-time redirect for demo/new sellers: send them to add-product on first login
+          const firstSellerRedirect = localStorage.getItem('sellerFirstLoginRedirectDone');
+          window.dispatchEvent(new Event('userLoggedIn'));
+          setIsLoading(false);
+          if (!firstSellerRedirect) {
+            localStorage.setItem('sellerFirstLoginRedirectDone', '1');
+            navigate('/seller/add-product');
+          } else {
+            navigate(redirectTo);
+          }
+          return;
         } else if (role === 'buyer') {
           localStorage.setItem('buyerToken', 'mock-buyer-token');
           localStorage.setItem('userName', cred.name);
@@ -58,14 +74,80 @@ const LoginPage: React.FC = () => {
           localStorage.setItem('userName', cred.name);
           localStorage.setItem('userRole', cred.role);
         }
+        // For non-seller demo flows, continue as before
         window.dispatchEvent(new Event('userLoggedIn'));
         setIsLoading(false);
-        navigate(cred.dashboard);
+        // Redirect demo users back to previous page if available
+        navigate(redirectTo);
+        return;
+      }
+
+      // Otherwise call backend login
+      const resp = await authService.login({ email: formData.email, password: formData.password });
+      // authService returns normalized response with token and user
+      if (resp && resp.user) {
+        // Prefer role returned by backend; fall back to UI selected role
+        const roleFromRespRaw = resp.user.role;
+        const roleFromResp = (roleFromRespRaw || role || '').toString().toLowerCase();
+        const token = resp.token || '';
+
+        // Determine display name: prefer fullName from response, then registeredFullName (from recent register), then email
+        const registeredFullName = sessionStorage.getItem('registeredFullName') || '';
+        const displayName = resp.user.fullName || registeredFullName || resp.user.email || formData.email;
+
+        localStorage.setItem('userName', displayName);
+        localStorage.setItem('userRole', roleFromResp || 'buyer');
+
+        // Clear temporary registered data
+        sessionStorage.removeItem('registeredEmail');
+        sessionStorage.removeItem('registeredPassword');
+        sessionStorage.removeItem('registeredFullName');
+
+        if (roleFromResp === 'buyer') {
+          localStorage.setItem('buyerToken', token);
+          localStorage.setItem('buyerProfile', JSON.stringify({
+            id: resp.user.id,
+            fullName: resp.user.fullName || displayName,
+            company: resp.user.company,
+            email: resp.user.email,
+            phone: resp.user.phone,
+            country: resp.user.country,
+            joinDate: resp.user.joinDate || new Date().toISOString()
+          }));
+          window.dispatchEvent(new Event('userLoggedIn'));
+          navigate(redirectTo);
+        } else if (roleFromResp === 'seller') {
+          localStorage.setItem('sellerToken', token);
+          localStorage.setItem('sellerProfile', JSON.stringify(resp.user));
+          // One-time redirect for sellers: if not yet redirected, send to add-product
+          const firstSellerRedirect = localStorage.getItem('sellerFirstLoginRedirectDone');
+          window.dispatchEvent(new Event('userLoggedIn'));
+          setIsLoading(false);
+          if (!firstSellerRedirect) {
+            localStorage.setItem('sellerFirstLoginRedirectDone', '1');
+            navigate('/seller/add-product');
+          } else {
+            navigate(redirectTo);
+          }
+        } else if (roleFromResp === 'admin') {
+          localStorage.setItem('adminToken', token);
+          window.dispatchEvent(new Event('userLoggedIn'));
+          navigate(redirectTo);
+        } else {
+          // default redirect
+          window.dispatchEvent(new Event('userLoggedIn'));
+          navigate('/');
+        }
+        setIsLoading(false);
       } else {
         setIsLoading(false);
         setErrors({ general: 'Email hoặc mật khẩu không đúng.' });
       }
-    }, 1000);
+    } catch (err: any) {
+      setIsLoading(false);
+      const msg = err?.message || 'Đăng nhập thất bại. Vui lòng thử lại.';
+      setErrors({ general: msg });
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

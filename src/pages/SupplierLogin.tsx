@@ -42,7 +42,7 @@ const SupplierLogin: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f8ecd7]">
+    <div className="min-h-screen flex items-center justify-center bg-app">
       <div className="bg-white rounded-lg shadow-lg p-10 max-w-md mx-auto text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Đăng nhập Supplier</h2>
         {/* Thông tin tài khoản demo */}

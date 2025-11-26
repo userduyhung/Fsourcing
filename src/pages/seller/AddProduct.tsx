@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '../../services/apiClient';
 // import { v4 as uuidv4 } from 'uuid'; // Uncomment if uuid is installed
 
 const AddProduct: React.FC = () => {
@@ -8,85 +9,100 @@ const AddProduct: React.FC = () => {
   const [quantity, setQuantity] = useState('');
   const [description, setDescription] = useState('');
   const [image, setImage] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    // Validate
-    if (!name.trim() || !price.trim() || !quantity.trim() || !description.trim() || !image.trim()) {
-      setErrorMsg('Vui lòng nhập đầy đủ thông tin sản phẩm.');
-      return;
-    }
-    if (isNaN(Number(price)) || Number(price) <= 0) {
-      setErrorMsg('Giá sản phẩm phải là số lớn hơn 0.');
-      return;
-    }
-    if (isNaN(Number(quantity)) || Number(quantity) < 0) {
-      setErrorMsg('Số lượng phải là số không âm.');
-      return;
-    }
-    // Giả lập lưu sản phẩm mới vào localStorage
-    const products = JSON.parse(localStorage.getItem('sellerProducts') || '[]');
-    const newProduct = {
-      // id: uuidv4(), // Use this if uuid is installed
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      name,
+
+    // Basic validation
+    if (!name.trim()) return setErrorMsg('Tên sản phẩm không được để trống.');
+    if (!price || isNaN(Number(price)) || Number(price) <= 0) return setErrorMsg('Giá sản phẩm không hợp lệ.');
+    if (isNaN(Number(quantity)) || Number(quantity) < 0) return setErrorMsg('Số lượng không hợp lệ.');
+
+    const newProductPayload: any = {
+      name: name.trim(),
       price: Number(price),
       quantity: Number(quantity),
-      description,
-      image,
-      status: 'active',
+      description: description.trim(),
+      image: image?.trim() || undefined,
     };
-    let success = false;
-    try {
-      localStorage.setItem('sellerProducts', JSON.stringify([newProduct, ...products]));
-      success = true;
-    } catch (err: any) {
-      // QuotaExceededError detection
-      const isQuotaError = err instanceof DOMException && (
-        err.name === 'QuotaExceededError' ||
-        err.code === 22 ||
-        (typeof err.message === 'string' && err.message.includes('QuotaExceeded'))
-      );
-      if (isQuotaError) {
-        // Try to free space by removing oldest product
-        try {
-          const currentProducts = JSON.parse(localStorage.getItem('sellerProducts') || '[]');
-          if (currentProducts.length > 0) {
-            currentProducts.pop(); // Remove oldest
-            localStorage.setItem('sellerProducts', JSON.stringify(currentProducts));
-            // Try again
-            localStorage.setItem('sellerProducts', JSON.stringify([newProduct, ...currentProducts]));
-            success = true;
-          } else {
-            // Fallback to sessionStorage
-            sessionStorage.setItem('sellerProducts', JSON.stringify([newProduct]));
-            success = true;
+
+    let created: any = null;
+
+    // If there is a file, upload using FormData
+    if (imageFile) {
+      try {
+        const formData = new FormData();
+        formData.append('Name', newProductPayload.name);
+        formData.append('Description', newProductPayload.description || '');
+        formData.append('ReferencePrice', String(newProductPayload.price));
+        formData.append('Quantity', String(newProductPayload.quantity));
+        if (newProductPayload.category) formData.append('Category', newProductPayload.category);
+        formData.append('ImageFile', imageFile, imageFile.name);
+
+        setIsUploading(true);
+        setUploadProgress(0);
+        const resp = await apiClient.client.post('/Products', formData, {
+          onUploadProgress: (progressEvent: any) => {
+            try {
+              const { loaded, total } = progressEvent;
+              if (total && total > 0) {
+                const percent = Math.round((loaded / total) * 100);
+                setUploadProgress(percent);
+              }
+            } catch {
+              // ignore
+            }
           }
-        } catch (innerErr) {
-          console.error('Quota error recovery failed:', innerErr);
-          setErrorMsg('Bộ nhớ trình duyệt đã đầy, không thể lưu sản phẩm mới. Vui lòng xóa bớt sản phẩm hoặc thử lại sau.');
-        }
-      } else {
-        setErrorMsg('Đã xảy ra lỗi khi lưu sản phẩm.');
+        });
+        created = resp?.data?.data ?? resp?.data ?? resp;
+      } catch (err: any) {
+        console.error('FormData upload failed', err);
+        setErrorMsg('Tải ảnh thất bại — kiểm tra kết nối hoặc thử lại.');
+        return;
+      } finally {
+        setIsUploading(false);
+        setUploadProgress(0);
       }
-      console.error('Lỗi lưu sản phẩm:', err);
+    } else {
+      // No file: use JSON API create
+      try {
+        created = await apiClient.productsApi.create(newProductPayload);
+      } catch (err: any) {
+        console.error('API create product failed', err);
+        setErrorMsg('Không thể tạo sản phẩm: lỗi máy chủ hoặc mất kết nối. Vui lòng thử lại.');
+        return;
+      }
     }
-    if (success) {
-      setName('');
-      setPrice('');
-      setQuantity('');
-      setDescription('');
-      setImage('');
-      alert('Thêm sản phẩm thành công!');
-      navigate(-1);
+
+    // Notify other parts of the app and navigate to products list
+    try {
+      window.dispatchEvent(new CustomEvent('sellerProductsUpdated', { detail: { product: created } }));
+    } catch (e) {
+      window.dispatchEvent(new Event('sellerProductsUpdated'));
     }
+    setName('');
+    setPrice('');
+    setQuantity('');
+    setDescription('');
+    setImage('');
+    setImageFile(null);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+    alert('Thêm sản phẩm thành công!');
+    navigate('/seller/products');
   };
 
   return (
-    <div className="bg-[#f8ecd7] min-h-screen font-sans flex items-center justify-center">
+    <div className="bg-app min-h-screen font-sans flex items-center justify-center">
       <form className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md" onSubmit={handleSubmit}>
         <h2 className="text-2xl font-bold mb-6">Thêm sản phẩm mới</h2>
         {errorMsg && (
@@ -110,7 +126,37 @@ const AddProduct: React.FC = () => {
         </div>
         <div className="mb-6">
           <label className="block font-medium mb-2">Ảnh sản phẩm (URL)</label>
-          <input type="text" className="w-full border rounded px-3 py-2" value={image} onChange={e => setImage(e.target.value)} required />
+          <input type="text" className="w-full border rounded px-3 py-2 mb-2" value={image} onChange={e => setImage(e.target.value)} placeholder="Hoặc dán URL ảnh ở đây (không bắt buộc khi upload file)" />
+          <div className="text-sm text-gray-600 mb-2">Hoặc upload file ảnh:</div>
+          <input type="file" accept="image/*" onChange={e => {
+            const f = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+            setImageFile(f);
+            if (f) {
+              const url = URL.createObjectURL(f);
+              setPreviewUrl(url);
+              // clear the text URL field when a file is chosen
+              setImage('');
+            } else {
+              if (previewUrl) {
+                URL.revokeObjectURL(previewUrl);
+                setPreviewUrl(null);
+              }
+            }
+          }} />
+          {previewUrl && (
+            <div className="mt-3">
+              <div className="mb-2 font-medium">Xem trước ảnh đã chọn</div>
+              <img src={previewUrl} alt="preview" className="w-40 h-40 object-cover rounded border" />
+            </div>
+          )}
+          {isUploading && (
+            <div className="mt-3">
+              <div className="text-sm mb-1">Đang tải lên: {uploadProgress}%</div>
+              <div className="w-full bg-gray-200 rounded h-2">
+                <div className="bg-green-500 h-2 rounded" style={{ width: `${uploadProgress}%` }} />
+              </div>
+            </div>
+          )}
         </div>
         <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold text-base">Thêm sản phẩm</button>
       </form>

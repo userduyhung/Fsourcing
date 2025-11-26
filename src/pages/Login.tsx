@@ -1,76 +1,199 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import authService from '../services/authService';
+import DebugLogger from '../components/DebugLogger';
+import Toast from '../components/Toast';
+import { useApiToast } from '../hooks/useApiToast';
 
 const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  // Auto-fill from registration if available
+  const registeredEmail = sessionStorage.getItem('registeredEmail') || '';
+  const registeredPassword = sessionStorage.getItem('registeredPassword') || '';
+
+  console.log('==== LOGIN COMPONENT MOUNTED ====');
+  console.log('Registered email from session:', registeredEmail);
+  console.log('Registered password from session:', registeredPassword ? '***' : 'none');
+  console.log('=================================');
+
+  const [email, setEmail] = useState(registeredEmail);
+  const [password, setPassword] = useState(registeredPassword);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { toast, showLoading, showSuccess, showError, hideToast } = useApiToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromLocation = (location.state as any)?.from;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const navigateAfterLogin = (target: any) => {
+    if (!target) {
+      navigate('/');
+      return;
+    }
+    if (typeof target === 'string') {
+      navigate(target);
+      return;
+    }
+    // target is expected to be { pathname, state }
+    if (target && target.pathname) {
+      navigate(target.pathname, { state: target.state });
+      return;
+    }
+    navigate('/');
+  };
+
+  // Clear session storage and error state after auto-fill
+  React.useEffect(() => {
+    console.log('==== useEffect RUNNING ====');
+
+    // Only clear on mount, not on every render
+    const savedEmail = sessionStorage.getItem('registeredEmail');
+    const savedPassword = sessionStorage.getItem('registeredPassword');
+
+    console.log('Saved email:', savedEmail);
+    console.log('Saved password:', savedPassword ? '***' : 'none');
+
+    if (savedEmail || savedPassword) {
+      console.log('Clearing sessionStorage...');
+      sessionStorage.removeItem('registeredEmail');
+      sessionStorage.removeItem('registeredPassword');
+      setError(''); // Clear any previous error
+      console.log('SessionStorage cleared, error state cleared');
+    }
+    console.log('==========================');
+  }, []); // Run only once on mount
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
+    console.log('==== LOGIN FORM SUBMIT ====');
+    console.log('Email from form:', email);
+    console.log('Password from form:', password);
+    console.log('==========================');
+
     if (!email.trim() || !password) {
       setError('Please enter both email and password.');
       return;
     }
 
     setIsLoading(true);
+    showLoading('Đang đăng nhập...');
 
-    // Mock authentication với role-based routing
-    setTimeout(() => {
-      if (email === 'admin@fsourcing.com' && password === 'admin123') {
-        // Admin login
-        localStorage.setItem('adminToken', 'mock-admin-token');
-        localStorage.setItem('userName', 'Admin');
-        localStorage.setItem('userRole', 'admin');
-        window.dispatchEvent(new Event('userLoggedIn'));
-        navigate('/admin/dashboard');
-      } else if (email === 'buyer@demo.com' && password === 'demo123') {
-        // Buyer login
-        localStorage.setItem('buyerToken', 'mock-buyer-token');
-        localStorage.setItem('userName', 'John Buyer');
-        localStorage.setItem('userRole', 'buyer');
-        localStorage.setItem('buyerProfile', JSON.stringify({
-          id: 1,
-          fullName: 'John Buyer',
-          company: 'ABC Manufacturing Co',
-          email: 'buyer@demo.com',
-          phone: '+1-555-0123',
-          country: 'Vietnam',
-          joinDate: '2024-01-15T00:00:00Z'
-        }));
-        window.dispatchEvent(new Event('userLoggedIn'));
-        navigate('/buyer/dashboard');
-      } else if (email === 'seller@demo.com' && password === 'demo123') {
-        // Seller login (for future implementation)
-        localStorage.setItem('sellerToken', 'mock-seller-token');
-        localStorage.setItem('userName', 'Demo Manufacturing Ltd');
-        localStorage.setItem('userRole', 'seller');
-        localStorage.setItem('sellerProfile', JSON.stringify({
-          id: 1,
-          companyName: 'Demo Manufacturing Ltd',
-          email: 'seller@demo.com',
-          phone: '+1-555-0456',
-          country: 'Vietnam',
-          joinDate: '2024-01-15T00:00:00Z'
-        }));
-        window.dispatchEvent(new Event('userLoggedIn'));
-        navigate('/products'); // Temporary redirect
+    try {
+      console.log('==== CALLING AUTH SERVICE ====');
+      // Call real API
+      const response = await authService.login({ email, password });
+
+      console.log('==== LOGIN RESPONSE RECEIVED ====');
+      console.log('Full response:', response);
+      console.log('Has user:', !!response.user);
+      console.log('Has token:', !!response.token);
+      console.log('=================================');
+
+      // Store user data based on role
+      if (response.user) {
+        // Normalize role to a string; default to empty string if missing
+        const role = (response.user.role || '').toLowerCase();
+        const token = response.token || 'auth-token';
+
+        console.log('==== PROCESSING USER DATA ====');
+        console.log('User role:', role);
+        console.log('Token:', token);
+        console.log('User object:', response.user);
+        console.log('==============================');
+
+        showSuccess('Đăng nhập thành công!');
+
+        // Store common data
+        localStorage.setItem('userName', response.user.fullName || response.user.email);
+        localStorage.setItem('userRole', role ?? '');
+
+        console.log('Stored userName:', response.user.fullName || response.user.email);
+        console.log('Stored userRole:', role);
+
+        // Store role-specific token and profile
+        if (role === 'admin') {
+          console.log('Redirecting to admin dashboard...');
+          localStorage.setItem('adminToken', token);
+          window.dispatchEvent(new Event('userLoggedIn'));
+          setTimeout(() => navigate('/admin/dashboard'), 1000);
+        } else if (role === 'buyer') {
+          console.log('Redirecting to home for buyer...');
+          const buyerProfile = {
+            id: response.user.id,
+            fullName: response.user.fullName,
+            company: response.user.company,
+            email: response.user.email,
+            phone: response.user.phone,
+            country: response.user.country,
+            joinDate: response.user.joinDate || new Date().toISOString()
+          };
+          console.log('Buyer profile:', buyerProfile);
+          localStorage.setItem('buyerToken', token);
+          localStorage.setItem('buyerProfile', JSON.stringify(buyerProfile));
+          window.dispatchEvent(new Event('userLoggedIn'));
+          setTimeout(() => navigateAfterLogin(fromLocation), 1000);
+        } else if (role === 'seller') {
+          console.log('Redirecting to home for seller...');
+          const sellerProfile = {
+            id: response.user.id,
+            companyName: response.user.company || response.user.fullName,
+            email: response.user.email,
+            phone: response.user.phone,
+            country: response.user.country,
+            joinDate: response.user.joinDate || new Date().toISOString()
+          };
+          console.log('Seller profile:', sellerProfile);
+          localStorage.setItem('sellerToken', token);
+          localStorage.setItem('sellerProfile', JSON.stringify(sellerProfile));
+          window.dispatchEvent(new Event('userLoggedIn'));
+          setTimeout(() => navigateAfterLogin(fromLocation), 1000);
+        } else {
+          console.error('Unknown role:', role);
+          showError('Unknown user role.');
+          setError('Unknown user role.');
+        }
       } else {
-        setError('Invalid email or password.');
+        console.error('No user in response!');
+        showError('Invalid response from server.');
+        setError('Invalid response from server.');
       }
+    } catch (err) {
+      console.error('==== LOGIN ERROR CAUGHT ====');
+      console.error('Error:', err);
+      console.error('Error type:', typeof err);
+      console.error('============================');
+
+      if (err instanceof Error) {
+        console.error('Error message:', err.message);
+        console.error('Error stack:', err.stack);
+        showError(err.message);
+        setError(err.message);
+      } else {
+        console.error('Unknown error type:', err);
+        showError('An error occurred. Please try again.');
+        setError('An error occurred. Please try again.');
+      }
+    } finally {
+      console.log('Login process finished, isLoading set to false');
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
-      <div className="max-w-md w-full space-y-8">
+    <>
+      <DebugLogger />
+      {toast.show && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={hideToast}
+        />
+      )}
+      <div className="min-h-screen flex items-center justify-center bg-app py-12 px-4">
+        <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <Link to="/" className="inline-flex items-center text-2xl font-bold text-blue-600 mb-6 font-sans">
             <span className="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-2 text-sm">F</span>
@@ -83,6 +206,13 @@ const Login: React.FC = () => {
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {registeredEmail && (
+            <div className="bg-green-50 border border-green-200 rounded-md p-4">
+              <p className="text-green-600 text-sm font-sans">
+                ✓ Đăng ký thành công! Thông tin đăng nhập đã được điền sẵn. Nhấn "Sign in" để tiếp tục.
+              </p>
+            </div>
+          )}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-md p-4">
               <p className="text-red-600 text-sm font-sans">{error}</p>
@@ -151,6 +281,12 @@ const Login: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading}
+            onClick={(e) => {
+              console.log('==== SIGN IN BUTTON CLICKED ====');
+              console.log('Event:', e);
+              console.log('isLoading:', isLoading);
+              console.log('================================');
+            }}
             className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-sans"
           >
             {isLoading ? 'Signing in...' : 'Sign in'}
@@ -174,28 +310,19 @@ const Login: React.FC = () => {
                 Create one here
               </Link>
             </p>
-            {/* Demo Credentials */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <h4 className="text-sm font-semibold text-blue-900 mb-2 font-sans">Demo Accounts:</h4>
-              <div className="space-y-2 text-xs">
-                <div className="bg-white p-2 rounded border">
-                  <p className="font-semibold text-blue-800 font-sans">Admin:</p>
-                  <p className="text-blue-700 font-sans">admin@fsourcing.com / admin123</p>
-                </div>
-                <div className="bg-white p-2 rounded border">
-                  <p className="font-semibold text-blue-800 font-sans">Buyer:</p>
-                  <p className="text-blue-700 font-sans">buyer@demo.com / demo123</p>
-                </div>
-                <div className="bg-white p-2 rounded border">
-                  <p className="font-semibold text-blue-800 font-sans">Seller:</p>
-                  <p className="text-blue-700 font-sans">seller@demo.com / seller123</p>
-                </div>
-              </div>
+            {/* In-memory database notice */}
+            <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <h4 className="text-sm font-semibold text-yellow-900 mb-2 font-sans">⚠️ Lưu ý quan trọng:</h4>
+              <p className="text-xs text-yellow-800 font-sans">
+                Hệ thống đang dùng <strong>in-memory database</strong>. Vui lòng đăng ký tài khoản mới để sử dụng.
+                Dữ liệu sẽ bị xóa khi server restart.
+              </p>
             </div>
           </div>
         </form>
       </div>
     </div>
+    </>
   );
 };
 

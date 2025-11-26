@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, Building, Phone, Globe } from 'lucide-react';
+import authService from '../../services/authService';
+import Toast from '../../components/Toast';
+import DebugLogger from '../../components/DebugLogger';
+import { useApiToast } from '../../hooks/useApiToast';
 
 const BuyerRegister: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -16,6 +20,8 @@ const BuyerRegister: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const { toast, showLoading, showSuccess, showError, hideToast } = useApiToast();
   const navigate = useNavigate();
 
   const countries = [
@@ -50,27 +56,63 @@ const BuyerRegister: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setIsLoading(true);
-    
-    // Mock registration
-    setTimeout(() => {
-      localStorage.setItem('buyerToken', 'mock-buyer-token');
-      localStorage.setItem('buyerProfile', JSON.stringify({
-        id: Date.now(),
+    showLoading('Đang đăng ký...');
+
+    try {
+      // Call real API
+      const response = await authService.register({
+        email: formData.email,
+        password: formData.password,
         fullName: formData.fullName,
         company: formData.company,
-        email: formData.email,
         phone: formData.phone,
         country: formData.country,
-        joinDate: new Date().toISOString()
-      }));
-      
+        role: 'buyer'
+      });
+
+      console.log('==== BUYER REGISTER RESPONSE CHECK ====');
+      console.log('Response:', response);
+      console.log('Has success:', response.success);
+      console.log('Has data:', !!response.data);
+      console.log('Message:', response.message);
+      console.log('=======================================');
+
+      // Check if registration successful based on actual backend response
+      // Backend returns: {success: true, message: "...", data: {id, email, role}}
+      if (response.success === true || (response.data && response.data.id)) {
+        // Show success toast
+        setShowSuccessToast(true);
+        showSuccess('Đăng ký thành công! Đang chuyển đến trang đăng nhập...');
+
+        // Store credentials temporarily for auto-fill on login page
+        sessionStorage.setItem('registeredEmail', formData.email);
+        sessionStorage.setItem('registeredPassword', formData.password);
+        // Also store full name so login can show the correct display name if backend doesn't return it immediately
+        sessionStorage.setItem('registeredFullName', formData.fullName);
+
+        // Wait 5 seconds before redirecting to login
+        setTimeout(() => {
+          navigate('/login');
+        }, 5000);
+      } else {
+        showError(response.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+        setErrors({ email: response.message || 'Đăng ký thất bại. Vui lòng thử lại.' });
+      }
+    } catch (err) {
+      if (err instanceof Error) {
+        showError(err.message);
+        setErrors({ email: err.message });
+      } else {
+        showError('Có lỗi xảy ra. Vui lòng thử lại.');
+        setErrors({ email: 'Có lỗi xảy ra. Vui lòng thử lại.' });
+      }
+    } finally {
       setIsLoading(false);
-      navigate('/buyer/dashboard');
-    }, 1500);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -83,8 +125,25 @@ const BuyerRegister: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="max-w-md w-full space-y-8">
+    <>
+      <DebugLogger />
+      {toast.show && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={hideToast}
+        />
+      )}
+      {showSuccessToast && (
+        <Toast
+          message="Đăng ký thành công! Đang chuyển đến trang đăng nhập..."
+          type="success"
+          duration={5000}
+          onClose={() => setShowSuccessToast(false)}
+        />
+      )}
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
+        <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <Link to="/" className="inline-flex items-center text-2xl font-bold text-blue-600 mb-6 font-sans">
             <span className="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-2 text-sm font-sans">F</span>
@@ -94,9 +153,29 @@ const BuyerRegister: React.FC = () => {
           <p className="mt-2 text-sm text-gray-600 font-sans">
             Tham gia sàn giao dịch để kết nối với nhà cung cấp toàn cầu
           </p>
+          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p className="text-xs text-yellow-800 font-sans">
+              ⚠️ <strong>Lưu ý:</strong> Hệ thống đang dùng in-memory database. Sau khi đăng ký thành công, hãy đăng nhập ngay lập tức. Nếu server restart, bạn cần đăng ký lại.
+            </p>
+          </div>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {errors.email && !errors.email.includes('thành công') && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-4">
+              <p className="text-red-600 text-sm font-sans">{errors.email}</p>
+              {errors.email.includes('đã được đăng ký') && (
+                <Link to="/login" className="text-blue-600 hover:text-blue-500 text-sm font-medium mt-2 inline-block">
+                  → Đăng nhập ngay
+                </Link>
+              )}
+            </div>
+          )}
+          {errors.email && errors.email.includes('thành công') && (
+            <div className="bg-green-50 border border-green-200 rounded-md p-4">
+              <p className="text-green-600 text-sm font-sans">{errors.email}</p>
+            </div>
+          )}
           <div className="space-y-4">
             {/* Full Name */}
             <div>
@@ -268,6 +347,7 @@ const BuyerRegister: React.FC = () => {
         </form>
       </div>
     </div>
+    </>
   );
 };
 

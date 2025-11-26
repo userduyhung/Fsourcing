@@ -10,7 +10,7 @@ const PaymentPage: React.FC = () => {
   };
 
   return (
-    <div className="bg-[#f8ecd7] min-h-screen font-sans flex flex-col items-center justify-center">
+    <div className="bg-app min-h-screen font-sans flex flex-col items-center justify-center">
       <div className="bg-white rounded-lg shadow p-8 w-full max-w-md">
         <h2 className="text-2xl font-bold mb-4 text-center">Nâng cấp Premium</h2>
         <p className="mb-4 text-center">Quét mã QR để thanh toán phí nâng cấp Premium cho tài khoản của bạn.</p>

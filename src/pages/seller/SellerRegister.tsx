@@ -1,7 +1,9 @@
-
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, User } from 'lucide-react';
+import authService from '../../services/authService';
+import Toast from '../../components/Toast';
+import { useApiToast } from '../../hooks/useApiToast';
 
 const SellerRegister: React.FC = () => {
   const [company, setCompany] = useState('');
@@ -10,44 +12,114 @@ const SellerRegister: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const { toast, showLoading, showSuccess, showError, hideToast } = useApiToast();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
     if (!company.trim() || !contactName.trim() || !email.trim() || !password) {
       setError('Vui lòng nhập đầy đủ thông tin.');
       return;
     }
+
     // Kiểm tra email cơ bản
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError('Vui lòng nhập email hợp lệ.');
       return;
     }
+
     setIsLoading(true);
-    setTimeout(() => {
-      // Mock đăng ký seller/supplier
-      localStorage.setItem('sellerToken', 'mock-seller-token');
-      localStorage.setItem('userName', contactName);
-      localStorage.setItem('userRole', 'seller');
-      localStorage.setItem('sellerProfile', JSON.stringify({
-        contactName,
+    showLoading('Đang đăng ký Seller...');
+
+    try {
+      // Call real API
+      const response = await authService.register({
+        email,
+        password,
+        fullName: contactName,
         company,
-        email
-      }));
-      window.dispatchEvent(new Event('userLoggedIn'));
-      navigate('/seller/dashboard');
+        role: 'seller'
+      });
+
+      console.log('==== SELLER REGISTER RESPONSE CHECK ====');
+      console.log('Response:', response);
+      console.log('Has success:', response.success);
+      console.log('Has data:', !!response.data);
+      console.log('Message:', response.message);
+      console.log('========================================');
+
+      // Check if registration successful based on actual backend response
+      // Backend returns: {success: true, message: "...", data: {id, email, role}}
+      if (response.success === true || (response.data && response.data.id)) {
+        // Show success toast
+        setShowSuccessToast(true);
+        showSuccess('Đăng ký Seller thành công! Đang chuyển đến trang đăng nhập...');
+
+        // Store credentials temporarily for auto-fill on login page
+        sessionStorage.setItem('registeredEmail', email);
+        sessionStorage.setItem('registeredPassword', password);
+
+        // Wait 5 seconds before redirecting to login
+        setTimeout(() => {
+          navigate('/login');
+        }, 5000);
+      } else {
+        showError(response.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+        setError(response.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+      }
+    } catch (err) {
+      if (err instanceof Error) {
+        showError(err.message);
+        setError(err.message);
+      } else {
+        showError('Có lỗi xảy ra. Vui lòng thử lại.');
+        setError('Có lỗi xảy ra. Vui lòng thử lại.');
+      }
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 font-sans">
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+    <>
+      {toast.show && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={hideToast}
+        />
+      )}
+      {showSuccessToast && (
+        <Toast
+          message="Đăng ký Seller thành công! Đang chuyển đến trang đăng nhập..."
+          type="success"
+          duration={5000}
+          onClose={() => setShowSuccessToast(false)}
+        />
+      )}
+      <div className="min-h-screen flex items-center justify-center bg-app py-12 px-4 font-sans">
+        <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
         <h2 className="text-2xl font-bold mb-6 text-center font-sans">Đăng ký Seller</h2>
-        <p className="text-sm text-gray-500 mb-6 text-center font-sans">Đăng ký công ty để bắt đầu bán hàng và kết nối với khách mua.</p>
-        {error && <div className="text-red-500 mb-4 text-center font-sans">{error}</div>}
+        <p className="text-sm text-gray-500 mb-4 text-center font-sans">Đăng ký công ty để bắt đầu bán hàng và kết nối với khách mua.</p>
+        <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+          <p className="text-xs text-yellow-800 font-sans text-center">
+            ⚠️ <strong>Lưu ý:</strong> Hệ thống đang dùng in-memory database. Sau khi đăng ký thành công, hãy đăng nhập ngay lập tức.
+          </p>
+        </div>
+        {error && !error.includes('thành công') && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+            <p className="text-red-600 text-sm text-center font-sans">{error}</p>
+          </div>
+        )}
+        {error && error.includes('thành công') && (
+          <div className="bg-green-50 border border-green-200 rounded-md p-4 mb-4">
+            <p className="text-green-600 text-sm text-center font-sans">{error}</p>
+          </div>
+        )}
         <div className="mb-4">
           <label className="block text-gray-700 mb-2 font-sans">Tên công ty</label>
           <div className="flex items-center border rounded px-3 py-2">
@@ -85,6 +157,7 @@ const SellerRegister: React.FC = () => {
         <div className="mt-6 text-sm text-gray-500 text-center font-sans">Đăng ký seller sẽ được xác minh trước khi kích hoạt.</div>
       </form>
     </div>
+    </>
   );
 };
 

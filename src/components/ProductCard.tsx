@@ -1,25 +1,71 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { ShoppingCart } from 'lucide-react';
+import { showAppToast } from '../utils/toast';
+import { addCartItem } from '../services/cartService';
 
 interface ProductCardProps {
   image: string;
-  price: string;
+  price: string | number;
   quantity: string;
   name: string;
   description: string;
+  id?: string;
 }
 
-import { ShoppingCart } from 'lucide-react';
-const ProductCard: React.FC<ProductCardProps & { onAddToCart?: (product: any) => void }> = ({ image, price, quantity, name, description, onAddToCart }) => {
+const ProductCard: React.FC<ProductCardProps & { onAddToCart?: (product: any) => void }> = ({ image, price, quantity, name, description, id, onAddToCart }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const handleClick = () => {
-    navigate(`/product/${encodeURIComponent(name)}`, { state: { product: { image, price, quantity, name, description } } });
+    // Ensure we pass a numeric price to the detail page (strip all non-digit characters)
+    const numericPrice = parseInt(String(price).replace(/[^\d]/g, ''), 10) || 0;
+    navigate(`/product/${encodeURIComponent(id || name)}`, { state: { product: { id, image, price: numericPrice, quantity, name, description } } });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCart = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onAddToCart) {
-      onAddToCart({ id: name, name, price: parseFloat(price.replace(/[^\d.]/g, '')), image });
+    // Check authentication: prefer role-specific tokens used across the app
+    const buyerToken = localStorage.getItem('buyerToken');
+    const sellerToken = localStorage.getItem('sellerToken');
+    const adminToken = localStorage.getItem('adminToken');
+    const supplierToken = localStorage.getItem('supplierToken');
+    const genericToken = localStorage.getItem('token');
+    const isAuthenticated = !!(buyerToken || sellerToken || adminToken || supplierToken || genericToken);
+    if (!isAuthenticated) {
+      // Show a toast first, then redirect to login preserving full location (path + state)
+      showAppToast('Bạn cần đăng nhập để thêm vào giỏ hàng', 'info', 1400);
+      const from = { pathname: location.pathname, state: (location as any).state };
+      setTimeout(() => navigate('/login', { state: { from } }), 600);
+      return;
+    }
+
+    try {
+      // parse an integer amount in VND from display string like "12.000 ₫" -> 12000
+      const numeric = parseInt(String(price).replace(/[^\d]/g, ''), 10) || 0;
+      
+      // Validate product has valid id (GUID required by backend)
+      if (!id) {
+        console.error('Product missing id:', { name, price, quantity });
+        showAppToast('Sản phẩm thiếu ID. Không thể thêm vào giỏ hàng.', 'error', 2000);
+        return;
+      }
+
+      // Call backend API to add to cart with full product info
+      await addCartItem(id, 1, {
+        name,
+        price: numeric,
+        image
+      });
+
+      // Also call the local callback for backward compatibility
+      if (onAddToCart) {
+        onAddToCart({ id: id!, name, price: numeric, image });
+      }
+
+      showAppToast('Đã thêm vào giỏ hàng', 'success', 1200);
+    } catch (error) {
+      console.error('Failed to add to cart:', error);
+      showAppToast('Không thể thêm vào giỏ hàng', 'error', 2000);
     }
   };
   return (
@@ -33,7 +79,11 @@ const ProductCard: React.FC<ProductCardProps & { onAddToCart?: (product: any) =>
       </button>
       <img src={image} alt={name} className="w-full h-32 object-contain rounded-md mb-2" />
       <div className="w-full">
-        <div className="font-bold text-base text-gray-900 mb-0.5 font-sans">{price}</div>
+        <div className="font-bold text-base text-gray-900 mb-0.5 font-sans">
+          {typeof price === 'number' 
+            ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price)
+            : price}
+        </div>
         <div className="text-gray-400 text-xs mb-0.5 font-sans">Số lượng: {quantity}</div>
         <div className="text-gray-700 text-sm font-medium font-sans">{name}</div>
         <div className="text-gray-500 text-xs mt-0.5 font-sans">{description}</div>

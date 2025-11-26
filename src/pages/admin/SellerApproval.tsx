@@ -104,6 +104,204 @@ const SellerApproval: React.FC = () => {
         bankStatement: 'bank-stmt-003.pdf'
       },
       reviewNotes: 'All documents verified. Established business with good financial standing.'
+    },
+    {
+      id: 4,
+      companyName: 'Smart Electronics Vietnam',
+      ownerName: 'Nguyen Van Anh',
+      email: 'anh.nguyen@smartelec.vn',
+      phone: '+84-28-3456-7890',
+      businessType: 'Electronics',
+      registrationNumber: 'REG-2024-004',
+      taxId: 'TAX-334455667',
+      address: '45 Le Van Viet, Thu Duc, Ho Chi Minh City',
+      website: 'https://smartelec.vn',
+      description: 'Leading distributor of consumer electronics and smart home devices in Vietnam.',
+      submittedAt: '2024-03-22T08:20:00Z',
+      status: 'pending',
+      documents: {
+        businessLicense: 'business-license-004.pdf',
+        taxCertificate: 'tax-cert-004.pdf',
+        bankStatement: 'bank-stmt-004.pdf'
+      }
+    },
+    {
+      id: 5,
+      companyName: 'Precision Auto Parts Co',
+      ownerName: 'David Lee',
+      email: 'david@precisionauto.com',
+      phone: '+1-555-1234',
+      businessType: 'Automotive',
+      registrationNumber: 'REG-2024-005',
+      taxId: 'TAX-998877665',
+      address: '200 Auto Plaza, Detroit, MI 48201',
+      description: 'Wholesale supplier of precision automotive parts and accessories for major car brands.',
+      submittedAt: '2024-03-19T16:45:00Z',
+      status: 'pending',
+      documents: {
+        businessLicense: 'business-license-005.pdf',
+        taxCertificate: 'tax-cert-005.pdf',
+        bankStatement: 'bank-stmt-005.pdf'
+      }
+    },
+    {
+      id: 6,
+      companyName: 'Global Textile Exporters',
+      ownerName: 'Priya Sharma',
+      email: 'priya@globaltextile.in',
+      phone: '+91-22-4567-8901',
+      businessType: 'Textile',
+      registrationNumber: 'REG-2024-006',
+      taxId: 'TAX-112233445',
+      address: '12 Gandhi Road, Mumbai, Maharashtra 400001',
+      website: 'https://globaltextile.in',
+      description: 'Premium textile manufacturer and exporter specializing in organic cotton and silk fabrics.',
+      submittedAt: '2024-03-21T11:30:00Z',
+      status: 'pending',
+      documents: {
+        businessLicense: 'business-license-006.pdf',
+        taxCertificate: 'tax-cert-006.pdf',
+        bankStatement: 'bank-stmt-006.pdf'
+      }
+    },
+    {
+      id: 7,
+      companyName: 'Fresh Farm Produce Ltd',
+      ownerName: 'James O\'Connor',
+      email: 'james@freshfarm.ie',
+      phone: '+353-1-555-9876',
+      businessType: 'Agriculture',
+      registrationNumber: 'REG-2024-007',
+      taxId: 'TAX-556677889',
+      address: '78 Farm Lane, Dublin, D02 XY45',
+      description: 'Organic farm produce supplier with EU certification and international distribution network.',
+      submittedAt: '2024-03-23T09:15:00Z',
+      status: 'pending',
+      documents: {
+        businessLicense: 'business-license-007.pdf',
+        taxCertificate: 'tax-cert-007.pdf',
+        bankStatement: 'bank-stmt-007.pdf'
+      }
+    },
+    {
+      id: 8,
+      companyName: 'Digital Print Solutions',
+      ownerName: 'Maria Garcia',
+      email: 'maria@digitalprint.es',
+      phone: '+34-91-555-4321',
+      businessType: 'Printing',
+      registrationNumber: 'REG-2024-008',
+      taxId: 'TAX-223344556',
+      address: '56 Calle Mayor, Madrid, 28013',
+      website: 'https://digitalprint.es',
+      description: 'Commercial printing services specializing in packaging and promotional materials.',
+      submittedAt: '2024-03-17T13:50:00Z',
+      status: 'pending',
+      documents: {
+        businessLicense: 'business-license-008.pdf',
+        taxCertificate: 'tax-cert-008.pdf',
+        bankStatement: 'bank-stmt-008.pdf'
+      }
+    },
+    {
+      id: 9,
+      companyName: 'Biotech Supplies International',
+      ownerName: 'Dr. Emily Watson',
+      email: 'emily@biotechsupply.com',
+      phone: '+44-20-7946-0958',
+      businessType: 'Medical',
+      registrationNumber: 'REG-2024-009',
+      taxId: 'TAX-667788990',
+      address: '89 Science Park, Cambridge, CB4 0WS',
+      website: 'https://biotechsupply.com',
+      description: 'Laboratory equipment and biotechnology supplies for research institutions and hospitals.',
+      submittedAt: '2024-03-16T10:20:00Z',
+      status: 'pending',
+      documents: {
+        businessLicense: 'business-license-009.pdf',
+        taxCertificate: 'tax-cert-009.pdf',
+        bankStatement: 'bank-stmt-009.pdf'
+      }
+    },
+    {
+      id: 10,
+      companyName: 'Pacific Trading Group',
+      ownerName: 'Kenji Tanaka',
+      email: 'kenji@pacifictrade.jp',
+      phone: '+81-3-5555-1122',
+      businessType: 'Trading',
+      registrationNumber: 'REG-2024-010',
+      taxId: 'TAX-445566778',
+      address: '23-1 Shibuya, Tokyo, 150-0002',
+      description: 'Import-export trading company handling diverse product categories across Asia-Pacific region.',
+      submittedAt: '2024-03-24T15:40:00Z',
+      status: 'pending',
+      documents: {
+        businessLicense: 'business-license-010.pdf',
+        taxCertificate: 'tax-cert-010.pdf',
+        bankStatement: 'bank-stmt-010.pdf'
+      }
+    },
+    {
+      id: 11,
+      companyName: 'Industrial Machinery Depot',
+      ownerName: 'Hans Mueller',
+      email: 'hans@machinery-depot.de',
+      phone: '+49-30-5555-7788',
+      businessType: 'Manufacturing',
+      registrationNumber: 'REG-2024-011',
+      taxId: 'TAX-889900112',
+      address: '15 Industriestrasse, Berlin, 10115',
+      website: 'https://machinery-depot.de',
+      description: 'Heavy industrial machinery and equipment supplier for manufacturing plants.',
+      submittedAt: '2024-03-14T12:10:00Z',
+      status: 'approved',
+      documents: {
+        businessLicense: 'business-license-011.pdf',
+        taxCertificate: 'tax-cert-011.pdf',
+        bankStatement: 'bank-stmt-011.pdf'
+      },
+      reviewNotes: 'Verified credentials. Strong financial history and proper documentation.'
+    },
+    {
+      id: 12,
+      companyName: 'Eco Packaging Solutions',
+      ownerName: 'Sophie Laurent',
+      email: 'sophie@ecopack.fr',
+      phone: '+33-1-5555-9900',
+      businessType: 'Packaging',
+      registrationNumber: 'REG-2024-012',
+      taxId: 'TAX-334455221',
+      address: '42 Rue de Paris, Lyon, 69001',
+      description: 'Sustainable packaging materials manufacturer specializing in biodegradable products.',
+      submittedAt: '2024-03-12T08:30:00Z',
+      status: 'approved',
+      documents: {
+        businessLicense: 'business-license-012.pdf',
+        taxCertificate: 'tax-cert-012.pdf',
+        bankStatement: 'bank-stmt-012.pdf'
+      },
+      reviewNotes: 'Approved with environmental certifications verified.'
+    },
+    {
+      id: 13,
+      companyName: 'Metro Construction Supplies',
+      ownerName: 'Ahmed Hassan',
+      email: 'ahmed@metroconstruct.ae',
+      phone: '+971-4-555-3344',
+      businessType: 'Construction',
+      registrationNumber: 'REG-2024-013',
+      taxId: 'TAX-776655443',
+      address: 'Building 7, Dubai Industrial City, Dubai',
+      description: 'Construction materials and equipment supplier for commercial and residential projects.',
+      submittedAt: '2024-03-10T14:25:00Z',
+      status: 'rejected',
+      documents: {
+        businessLicense: 'business-license-013.pdf',
+        taxCertificate: 'tax-cert-013.pdf',
+        bankStatement: 'bank-stmt-013.pdf'
+      },
+      reviewNotes: 'Incomplete documentation. Tax certificate expired.'
     }
   ]);
 

@@ -92,7 +92,7 @@ const SuccessStories: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans">
+    <div className="min-h-screen bg-app font-sans">
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

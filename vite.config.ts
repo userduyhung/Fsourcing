@@ -11,5 +11,15 @@ export default defineConfig({
     fs: {
       strict: false,
     },
+    // Dev-time proxy: forward `/api/*` calls to backend during development.
+    // Set BACKEND_URL env var to override the default (http://localhost:5000).
+    proxy: {
+      '/api': {
+        target: process.env.BACKEND_URL || 'http://localhost:5000',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api/, '/api')
+      }
+    }
   },
 });

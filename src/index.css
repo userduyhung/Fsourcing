@@ -6,8 +6,34 @@
   body {
     font-family: 'Inter', sans-serif;
   }
-  
+
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Poppins', sans-serif;
+  }
+}
+
+@layer utilities {
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-right 0.3s ease-out;
+  }
+
+  /* App theme background utility using a CSS variable for easy theme overrides */
+  :root {
+    --app-bg: #f8fafc; /* default to Tailwind slate-50 */
+  }
+
+  .bg-app {
+    background-color: var(--app-bg) !important;
   }
 }

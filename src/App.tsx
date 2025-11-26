@@ -28,8 +28,11 @@ import Services from './pages/Services';
 import SuccessStories from './pages/SuccessStories';
 import ChatWidget from './components/ChatWidget';
 import CartModal from './components/CartModal';
+import ToastListener from './components/ToastListener';
 import CartPage from './pages/buyer/CartPage';
 import CheckoutPage from './pages/buyer/CheckoutPage';
+import { getCart } from './services/cartService';
+import { sanitizeCartItems } from './utils/cartValidation';
 
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -54,7 +57,7 @@ import { useParams } from 'react-router-dom';
 // Wrapper to extract productId from URL params and pass to EditProduct
 const EditProductWrapper = () => {
   const { id } = useParams();
-  const productId = id ? Number(id) : 0;
+  const productId = id || '';
   return <EditProduct productId={productId} />;
 }
 
@@ -124,9 +127,44 @@ function App() {
     };
   }, []);
 
+  // Load cart from localStorage and sync with state
+  useEffect(() => {
+    const loadCart = async () => {
+      try {
+        const stored = await getCart();
+        setCart(sanitizeCartItems(stored.items as any));
+      } catch (e) {
+        console.error('Failed to load cart:', e);
+      }
+    };
+
+    loadCart();
+
+    // Listen for cart changes from localStorage
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'localCart') {
+        loadCart();
+      }
+    };
+
+    // Custom event for cart updates within the same tab
+    const handleCartUpdate = () => {
+      loadCart();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('cartUpdated', handleCartUpdate);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('cartUpdated', handleCartUpdate);
+    };
+  }, []);
+
   return (
     <Router>
       <ScrollToTop />
+      <ToastListener />
       <div className="min-h-screen bg-white">
         {/* Header */}
         <header className="bg-white border-b border-gray-200">
@@ -139,7 +177,7 @@ function App() {
                 </Link>
               </div>
               <nav className="hidden md:flex space-x-8 font-sans">
-                <Link to="/" className="text-gray-600 hover:text-blue-600 transition-colors">Nhà cung cấp</Link>
+                {/* Supplier link removed temporarily */}
                 <Link to="/products" className="text-gray-600 hover:text-blue-600 transition-colors">Sản phẩm</Link>
                 <Link to="/services" className="text-gray-600 hover:text-blue-600 transition-colors">Dịch vụ</Link>
                 <Link to="/about" className="text-gray-600 hover:text-blue-600 transition-colors">Giới thiệu</Link>
@@ -189,26 +227,17 @@ function App() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                   <div className="text-center">
                     <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 font-sans">
-                      <span className="inline-block">Kết nối với nhà cung cấp uy tín</span>
-                      <span className="text-blue-600 inline-block"> trên toàn cầu</span>
+                      <span className="inline-block">Khám phá sản phẩm chất lượng</span>
+                      <span className="text-blue-600 inline-block"> cho doanh nghiệp của bạn</span>
                     </h1>
                     <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto font-sans">
-                      Khám phá hàng triệu sản phẩm từ các nhà sản xuất đáng tin cậy. Đơn giản hóa <span className="inline-block">quy trình</span> mua hàng với nền tảng B2B thông minh.
+                      Tìm các sản phẩm đáng tin cậy, tối ưu hóa quy trình mua sắm với nền tảng B2B tiện lợi.
                     </p>
                     {/* Search Bar */}
                     <div className="mb-12">
                       <SearchBar />
                     </div>
-                    {!(user && user.role === 'buyer') && (
-                      <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-                        <Link to="/register" className="bg-blue-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-all transform hover:scale-105 shadow-lg font-sans inline-block text-center">
-                          Bắt đầu tìm nguồn hàng
-                        </Link>
-                        <Link to="/register" className="border-2 border-blue-600 text-blue-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-600 hover:text-white transition-colors font-sans inline-block text-center">
-                          Trở thành nhà cung cấp
-                        </Link>
-                      </div>
-                    )}
+                    {/* Supplier CTAs removed temporarily */}
                     <div className="relative max-w-4xl mx-auto">
                       <div className="bg-white rounded-xl shadow-2xl p-4">
                         <img
@@ -242,8 +271,8 @@ function App() {
                           <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-200 transition-colors">
                             <Shield className="h-8 w-8 text-blue-600" />
                           </div>
-                          <h3 className="text-xl font-semibold text-gray-900 mb-2 font-sans">Nhà cung cấp đã xác thực</h3>
-                          <p className="text-gray-600 font-sans">Tất cả nhà cung cấp đều được kiểm duyệt nghiêm ngặt để đảm bảo uy tín và chất lượng.</p>
+                          <h3 className="text-xl font-semibold text-gray-900 mb-2 font-sans">Đối tác đã xác thực</h3>
+                          <p className="text-gray-600 font-sans">Tất cả đối tác đều được kiểm duyệt nghiêm ngặt để đảm bảo uy tín và chất lượng.</p>
                         </div>
                         <div className="text-center group">
                           <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-purple-200 transition-colors">
@@ -277,191 +306,9 @@ function App() {
                     </div>
                   </section>
 
-                  {/* Supplier Directory Preview */}
-                  <section className="py-20 bg-gray-50">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                      <div className="text-center mb-16">
-                        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 font-sans">
-                          Nhà cung cấp nổi bật
-                        </h2>
-                        <p className="text-xl text-gray-600 max-w-3xl mx-auto font-sans">
-                          Khám phá các nhà cung cấp hàng đầu ở nhiều lĩnh vực
-                        </p>
-                      </div>
-                      
-                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {[
-                          {
-                            id: 1,
-                            name: "TechManufacturing Co.",
-                            country: "China",
-                            products: "Electronics & Components",
-                            rating: 4.9,
-                            verified: true,
-                            image: "https://images.pexels.com/photos/3862132/pexels-photo-3862132.jpeg"
-                          },
-                          {
-                            id: 2,
-                            name: "Global Textiles Ltd.",
-                            country: "India",
-                            products: "Clothing & Accessories",
-                            rating: 4.8,
-                            verified: true,
-                            image: "https://images.pexels.com/photos/7876665/pexels-photo-7876665.jpeg"
-                          },
-                          {
-                            id: 3,
-                            name: "Industrial Solutions Inc.",
-                            country: "Germany",
-                            products: "Machinery & Equipment",
-                            rating: 4.9,
-                            verified: true,
-                            image: "https://images.pexels.com/photos/3862373/pexels-photo-3862373.jpeg"
-                          },
-                          {
-                            id: 4,
-                            name: "Green Energy Systems",
-                            country: "USA",
-                            products: "Renewable Energy",
-                            rating: 4.7,
-                            verified: true,
-                            image: "https://images.pexels.com/photos/2800832/pexels-photo-2800832.jpeg"
-                          },
-                          {
-                            id: 5,
-                            name: "Precision Parts Co.",
-                            country: "Japan",
-                            products: "Auto Parts & Accessories",
-                            rating: 4.8,
-                            verified: true,
-                            image: "https://www.shutterstock.com/image-illustration/car-parts-auto-spare-isolated-600nw-2283939101.jpg"
-                          },
-                          {
-                            id: 6,
-                            name: "Beauty & Care International",
-                            country: "South Korea",
-                            products: "Cosmetics & Personal Care",
-                            rating: 4.9,
-                            verified: true,
-                            image: "https://images.pexels.com/photos/3018841/pexels-photo-3018841.jpeg"
-                          }
-                        ].map((supplier) => (
-                          <Link
-                            key={supplier.id}
-                            to={`/seller-detail/${supplier.id}`}
-                            className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group cursor-pointer block"
-                          >
-                            <div className="relative h-48">
-                              <img
-                                src={supplier.image}
-                                alt={supplier.name}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              />
-                              {supplier.verified && (
-                                <div className="absolute top-4 right-4 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
-                                  Verified
-                                </div>
-                              )}
-                            </div>
-                            <div className="p-6">
-                              <h3 className="text-xl font-semibold text-gray-900 mb-2">{supplier.name}</h3>
-                              <p className="text-gray-600 mb-2">{supplier.country}</p>
-                              <p className="text-blue-600 font-medium mb-4">{supplier.products}</p>
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center">
-                                  <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                                  <span className="text-gray-700 ml-1 font-medium">{supplier.rating}</span>
-                                </div>
-                                <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
-                              </div>
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                      
-                      <div className="text-center mt-12">
-                        <Link to="/register" className="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold font-sans">
-                          Xem tất cả nhà cung cấp
-                        </Link>
-                      </div>
-                    </div>
-                  </section>
+                  {/* Supplier directory preview removed temporarily */}
 
-                  {/* Dashboard Preview */}
-                  <section className="py-20 bg-white">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                      <div className="grid lg:grid-cols-2 gap-12 items-center">
-                        <div>
-                          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6 font-sans">
-                            Bảng điều khiển thông minh cho mua hàng
-                          </h2>
-                          <p className="text-xl text-gray-600 mb-8 font-sans">
-                            Quản lý toàn bộ quy trình mua hàng trên một bảng điều khiển trực quan. Theo dõi đơn hàng, đánh giá nhà cung cấp, tối ưu hóa mua sắm.
-                          </p>
-                          
-                          <div className="space-y-4 mb-8">
-                            <div className="flex items-center">
-                              <BarChart3 className="h-6 w-6 text-blue-600 mr-3" />
-                              <span className="text-gray-700 font-sans">Phân tích và báo cáo tức thời</span>
-                            </div>
-                            <div className="flex items-center">
-                              <Package className="h-6 w-6 text-blue-600 mr-3" />
-                              <span className="text-gray-700 font-sans">Theo dõi và quản lý đơn hàng</span>
-                            </div>
-                            <div className="flex items-center">
-                              <Users className="h-6 w-6 text-blue-600 mr-3" />
-                              <span className="text-gray-700 font-sans">Quản lý mối quan hệ nhà cung cấp</span>
-                            </div>
-                          </div>
-                          
-                          <Link to="/register" className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold font-sans">
-                            Dùng thử bảng điều khiển
-                          </Link>
-                        </div>
-                        
-                        <div className="relative">
-                          <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl p-8">
-                            <img
-                              src="https://images.pexels.com/photos/590020/pexels-photo-590020.jpeg"
-                              alt="Dashboard Analytics"
-                              className="w-full rounded-lg shadow-2xl"
-                            />
-                          </div>
-                          <div className="absolute -bottom-6 -left-6 bg-white p-6 rounded-xl shadow-xl">
-                            <div className="flex items-center space-x-4">
-                              <div className="bg-green-100 p-3 rounded-full">
-                                <TrendingUp className="h-6 w-6 text-green-600" />
-                              </div>
-                              <div>
-                                <p className="text-sm text-gray-500 font-sans">Tổng tiết kiệm</p>
-                                <p className="text-xl font-bold text-gray-900 font-sans">56 tỷ VNĐ</p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-
-                  {/* Ready to Transform Section */}
-                  <section className="py-20 bg-blue-600">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                      <h2 className="text-3xl md:text-4xl font-bold text-white mb-6 font-sans">
-                        Sẵn sàng chuyển đổi mua hàng?
-                      </h2>
-                      <p className="text-xl text-blue-100 mb-8 max-w-3xl mx-auto font-sans">
-                        Hàng ngàn doanh nghiệp đã tin dùng Fsourcing để tối ưu hóa mua hàng toàn cầu.
-                      </p>
-                      <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                        <Link to="/register" className="bg-white text-blue-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-50 transition-colors font-sans inline-block text-center">
-                          Dùng thử miễn phí
-                        </Link>
-                        <Link to="/register" className="border-2 border-white text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors font-sans inline-block text-center">
-                          Đặt lịch demo
-                        </Link>
-                      </div>
-                    </div>
-                  </section>
+                  {/* Dashboard and Ready-to-Transform sections removed per request */}
                 </>
               )}
             </>
@@ -537,12 +384,12 @@ function App() {
           <Route path="/admin/seller-approval" element={<SellerApproval />} />
           <Route path="/cart" element={
             <BuyerProtectedRoute>
-              <CartPage cart={cart} />
+              <CartPage />
             </BuyerProtectedRoute>
           } />
           <Route path="/buyer/checkout" element={
             <BuyerProtectedRoute>
-              <CheckoutPage cart={cart} />
+              <CheckoutPage onClearCart={() => setCart([])} />
             </BuyerProtectedRoute>
           } />
         </Routes>

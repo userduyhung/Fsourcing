@@ -22,7 +22,7 @@ const OrderList: React.FC = () => {
   }, []);
 
   return (
-    <div className="bg-[#f8ecd7] min-h-screen font-sans">
+    <div className="bg-app min-h-screen font-sans">
       <div className="max-w-3xl mx-auto py-10">
         <h2 className="text-2xl font-bold mb-6">Danh sách đơn hàng đã bán</h2>
         {orders.length === 0 ? (

@@ -8,7 +8,7 @@ interface PaymentSuccessProps {
 }
 
 const PaymentSuccess: React.FC<PaymentSuccessProps> = ({ orderId, amount, transactionId }) => {  return (
-    <div className="bg-[#f8ecd7] min-h-screen font-sans flex items-center justify-center">
+    <div className="bg-app min-h-screen font-sans flex items-center justify-center">
       <div className="bg-white rounded-lg shadow-lg p-10 max-w-md mx-auto text-center">
         <img src="/success.svg" alt="Thanh toán thành công" className="mx-auto mb-6 w-20 h-20" />
         <h2 className="text-2xl font-bold text-green-600 mb-4">Thanh toán thành công!</h2>

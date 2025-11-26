@@ -1,78 +1,94 @@
 import React, { useState, useEffect } from 'react';
+import apiClient from '../../services/apiClient';
+import { useNavigate } from 'react-router-dom';
 
 interface Product {
-  id: number;
+  id: string | number;
   name: string;
-  price: number;
-  description: string;
-  image: string;
+  price?: number;
+  description?: string;
+  image?: string;
 }
 
-const EditProduct: React.FC<{ productId: number }> = ({ productId }) => {
+const EditProduct: React.FC<{ productId: string }> = ({ productId }) => {
   const [product, setProduct] = useState<Product | null>(null);
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
   const [image, setImage] = useState('');
   const [loading, setLoading] = useState<boolean>(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
-    try {
-      const products: Product[] = JSON.parse(localStorage.getItem('sellerProducts') || '[]');
-      const found = products.find(p => p.id === productId);
-      if (isMounted) {
-        if (found) {
-          setProduct(found);
-          setName(found.name);
-          setPrice(found.price.toString());
-          setDescription(found.description);
-          setImage(found.image);
-        } else {
-          setProduct(null);
+    setErrorMsg(null);
+    const fetchProduct = async () => {
+      try {
+        const resp = await apiClient.productsApi.get(String(productId));
+        const data = resp?.data ?? resp;
+        if (isMounted) {
+          if (data) {
+            setProduct(data as Product);
+            setName(data.name || '');
+            setPrice((data.price ?? data.ReferencePrice ?? 0).toString());
+            setDescription(data.description || '');
+            setImage(data.image || data.imagePath || '');
+          } else {
+            setProduct(null);
+          }
         }
-        setLoading(false);
+      } catch (err: any) {
+        console.error('Failed to fetch product', err);
+        if (isMounted) setErrorMsg('Không thể tải sản phẩm. Vui lòng thử lại.');
+      } finally {
+        if (isMounted) setLoading(false);
       }
-    } catch (err) {
-      if (isMounted) {
-        setProduct(null);
-        setLoading(false);
-      }
-    }
+    };
+    fetchProduct();
     return () => { isMounted = false; };
   }, [productId]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!product) return;
-    const products: Product[] = JSON.parse(localStorage.getItem('sellerProducts') || '[]');
-    const updated = products.map(p =>
-      p.id === productId
-        ? { ...p, name, price: Number(price), description, image }
-        : p
-    );
-    localStorage.setItem('sellerProducts', JSON.stringify(updated));
-    alert('Cập nhật sản phẩm thành công!');
+    setErrorMsg(null);
+    try {
+      const payload = {
+        name,
+        description,
+        referencePrice: Number(price),
+        imagePath: image,
+      };
+      await apiClient.request('put', `/products/${productId}`, payload);
+      alert('Cập nhật sản phẩm thành công!');
+      // Refresh list
+      window.dispatchEvent(new Event('sellerProductsUpdated'));
+      navigate('/seller/products');
+    } catch (err: any) {
+      console.error('Update product failed', err);
+      setErrorMsg('Cập nhật thất bại — kiểm tra kết nối hoặc quyền và thử lại.');
+    }
   };
 
   if (loading) {
     return (
-      <div className="bg-[#f8ecd7] min-h-screen font-sans flex items-center justify-center">
+      <div className="bg-app min-h-screen font-sans flex items-center justify-center">
         <div className="text-lg text-gray-600 animate-pulse">Đang tải sản phẩm...</div>
       </div>
     );
   }
   if (!product) {
     return (
-      <div className="bg-[#f8ecd7] min-h-screen font-sans flex items-center justify-center">
+      <div className="bg-app min-h-screen font-sans flex items-center justify-center">
         Không tìm thấy sản phẩm.
       </div>
     );
   }
 
   return (
-    <div className="bg-[#f8ecd7] min-h-screen font-sans flex items-center justify-center">
+    <div className="bg-app min-h-screen font-sans flex items-center justify-center">
       <form className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md" onSubmit={handleSubmit}>
         <h2 className="text-2xl font-bold mb-6">Chỉnh sửa sản phẩm</h2>
         <div className="mb-4">

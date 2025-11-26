@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, Search, Package, Users, Filter, MapPin, Award, Clock } from 'lucide-react';
+import { ChevronDown, Package } from 'lucide-react';
 
 interface SearchBarProps {
   className?: string;
@@ -14,14 +14,12 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [filters, setFilters] = useState({
-    industry: '',
-    location: '',
-    certification: ''
+    industry: ''
   });
 
   const categories = [
-    { name: 'Sản phẩm', icon: Package },
-    { name: 'Nhà cung cấp', icon: Users }
+    { name: 'Sản phẩm', icon: Package }
+    // 'Nhà cung cấp' option removed temporarily
   ];
 
   // Sample data for suggestions
@@ -77,7 +75,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
 
     // Simulate API call - replace with real search logic
     const query = searchQuery.trim() || 'Tất cả';
-    alert(`Tìm kiếm "${query}" trong ${selectedCategory}\nĐịa điểm: ${filters.location || 'Tất cả'}\nNgành: ${filters.industry || 'Tất cả'}\nChứng nhận: ${filters.certification || 'Tất cả'}`);
+    alert(`Tìm kiếm "${query}" trong ${selectedCategory}\nNgành: ${filters.industry || 'Tất cả'}`);
   };
 
   const handleInputChange = (value: string) => {
@@ -107,10 +105,13 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
       saveToHistory(searchQuery);
     }
     setShowSuggestions(false);
-    // Navigate to /products with search query (or without if empty)
-    const url = searchQuery.trim()
-      ? `/products?search=${encodeURIComponent(searchQuery)}`
-      : `/products`;
+    // Navigate to /products with search query and optional industry filter
+    const query = searchQuery.trim();
+    const industry = filters.industry;
+    const params = new URLSearchParams();
+    if (query) params.set('search', query);
+    if (industry) params.set('industry', industry);
+    const url = `/products${params.toString() ? '?' + params.toString() : ''}`;
     window.location.href = url;
   };
 
@@ -184,25 +185,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
 
       {/* Always-visible Filters */}
       <div className="mt-3 bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-w-4xl mx-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              <MapPin className="h-4 w-4 inline mr-1" />
-              Địa điểm
-            </label>
-            <select
-              value={filters.location}
-              onChange={e => setFilters({ ...filters, location: e.target.value })}
-              className="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
-            >
-              <option value="">Tất cả địa điểm</option>
-              <option value="china">Trung Quốc</option>
-              <option value="india">Ấn Độ</option>
-              <option value="vietnam">Việt Nam</option>
-              <option value="usa">Mỹ</option>
-              <option value="germany">Đức</option>
-            </select>
-          </div>
+        <div className="grid grid-cols-1 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               <Package className="h-4 w-4 inline mr-1" />
@@ -214,28 +197,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
               className="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
             >
               <option value="">Tất cả ngành</option>
-              <option value="electronics">Điện tử</option>
-              <option value="textiles">Dệt may</option>
-              <option value="machinery">Máy móc</option>
-              <option value="automotive">Ô tô</option>
-              <option value="chemicals">Hóa chất</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              <Award className="h-4 w-4 inline mr-1" />
-              Chứng nhận
-            </label>
-            <select
-              value={filters.certification}
-              onChange={e => setFilters({ ...filters, certification: e.target.value })}
-              className="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
-            >
-              <option value="">Tất cả chứng nhận</option>
-              <option value="iso9001">ISO 9001</option>
-              <option value="iso14001">ISO 14001</option>
-              <option value="ce">CE</option>
-              <option value="fda">FDA</option>
+              <option value="Bia, nước giải khát">Bia, nước giải khát</option>
+              <option value="Bánh kẹo, trà, cà phê">Bánh kẹo, trà, cà phê</option>
+              <option value="Thực phẩm khô, gia vị">Thực phẩm khô, gia vị</option>
+              <option value="Chăm sóc cá nhân">Chăm sóc cá nhân</option>
+              <option value="Sữa và Sản phẩm từ sữa">Sữa và Sản phẩm từ sữa</option>
             </select>
           </div>
         </div>

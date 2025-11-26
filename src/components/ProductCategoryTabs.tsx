@@ -2,16 +2,21 @@ import React, { useState } from 'react';
 
 const categories = [
   'Tất cả',
-  'Điện tử di động',
-  'Phụ kiện & Xe',
-  'Làm đẹp & Chăm sóc cá nhân',
-  'Điện tử tiêu dùng',
-  'Linh kiện điện tử',
-  'Phụ kiện thời trang & Giày dép',
+  'Bia, nước giải khát',
+  'Bánh kẹo, trà, cà phê',
+  'Thực phẩm khô, gia vị',
+  'Chăm sóc cá nhân',
+  'Sữa và Sản phẩm từ sữa',
+  // 'Hóa phẩm và giấy' removed per request
 ];
 
-const ProductCategoryTabs: React.FC<{ onSelect?: (category: string) => void }> = ({ onSelect }) => {
-  const [selected, setSelected] = useState(categories[0]);
+const ProductCategoryTabs: React.FC<{ onSelect?: (category: string) => void, selected?: string }> = ({ onSelect, selected: selectedProp }) => {
+  const [selected, setSelected] = useState(selectedProp ?? categories[0]);
+
+  // Sync when parent-controlled selected prop changes
+  React.useEffect(() => {
+    if (selectedProp) setSelected(selectedProp);
+  }, [selectedProp]);
   return (
     <div className="flex overflow-x-auto bg-white rounded-xl mb-6 scrollbar-hide font-sans" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
       <style>{`

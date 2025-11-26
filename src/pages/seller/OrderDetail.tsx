@@ -33,21 +33,21 @@ const OrderDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="bg-[#f8ecd7] min-h-screen font-sans flex items-center justify-center">
+      <div className="bg-app min-h-screen font-sans flex items-center justify-center">
         <div className="text-lg text-gray-600 animate-pulse">Đang tải đơn hàng...</div>
       </div>
     );
   }
   if (!order) {
     return (
-      <div className="bg-[#f8ecd7] min-h-screen font-sans flex items-center justify-center">
+      <div className="bg-app min-h-screen font-sans flex items-center justify-center">
         Không tìm thấy đơn hàng.
       </div>
     );
   }
 
   return (
-    <div className="bg-[#f8ecd7] min-h-screen font-sans">
+    <div className="bg-app min-h-screen font-sans">
       <div className="max-w-2xl mx-auto py-10">
         <h2 className="text-2xl font-bold mb-6">Chi tiết đơn hàng #{order.id}</h2>
         <div className="bg-white rounded-lg shadow p-8">
