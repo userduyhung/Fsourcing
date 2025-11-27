@@ -4,11 +4,14 @@
 
 @layer base {
   body {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Noto Sans', 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Headings: prefer Noto Sans first (has full Vietnamese glyphs), fall back to Poppins */
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Poppins', sans-serif;
+    font-family: 'Noto Sans', 'Poppins', sans-serif !important;
   }
 }
 
@@ -36,4 +39,22 @@
   .bg-app {
     background-color: var(--app-bg) !important;
   }
+
+  /* Helpful helper classes to explicitly choose heading/body fonts in components */
+  .font-heading {
+    font-family: 'Noto Sans', 'Poppins', sans-serif !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .font-body {
+    font-family: 'Noto Sans', 'Inter', sans-serif !important;
+  }
+  
+    /* Vietnamese-ready font helper: prefer Noto Sans for correct diacritics */
+    .font-vn {
+      font-family: 'Noto Sans', 'Inter', sans-serif !important;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
 }

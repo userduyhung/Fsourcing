@@ -101,60 +101,60 @@ const SellerRegister: React.FC = () => {
           onClose={() => setShowSuccessToast(false)}
         />
       )}
-      <div className="min-h-screen flex items-center justify-center bg-app py-12 px-4 font-sans">
+      <div className="min-h-screen flex items-center justify-center bg-app py-12 px-4 font-body">
         <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center font-sans">Đăng ký Seller</h2>
-        <p className="text-sm text-gray-500 mb-4 text-center font-sans">Đăng ký công ty để bắt đầu bán hàng và kết nối với khách mua.</p>
+        <h2 className="text-2xl font-bold mb-6 text-center font-heading">Đăng ký Seller</h2>
+        <p className="text-sm text-gray-500 mb-4 text-center font-body">Đăng ký công ty để bắt đầu bán hàng và kết nối với khách mua.</p>
         <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-          <p className="text-xs text-yellow-800 font-sans text-center">
+          <p className="text-xs text-yellow-800 font-body text-center">
             ⚠️ <strong>Lưu ý:</strong> Hệ thống đang dùng in-memory database. Sau khi đăng ký thành công, hãy đăng nhập ngay lập tức.
           </p>
         </div>
         {error && !error.includes('thành công') && (
           <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
-            <p className="text-red-600 text-sm text-center font-sans">{error}</p>
+            <p className="text-red-600 text-sm text-center font-body">{error}</p>
           </div>
         )}
         {error && error.includes('thành công') && (
           <div className="bg-green-50 border border-green-200 rounded-md p-4 mb-4">
-            <p className="text-green-600 text-sm text-center font-sans">{error}</p>
+            <p className="text-green-600 text-sm text-center font-body">{error}</p>
           </div>
         )}
         <div className="mb-4">
-          <label className="block text-gray-700 mb-2 font-sans">Tên công ty</label>
+          <label className="block text-gray-700 mb-2 font-body">Tên công ty</label>
           <div className="flex items-center border rounded px-3 py-2">
             <User className="w-5 h-5 text-gray-400 mr-2" />
-            <input type="text" value={company} onChange={e => setCompany(e.target.value)} className="w-full outline-none font-sans" placeholder="Tên công ty hoặc nhà máy" />
+            <input type="text" value={company} onChange={e => setCompany(e.target.value)} className="w-full outline-none font-body" placeholder="Tên công ty hoặc nhà máy" />
           </div>
         </div>
         <div className="mb-4">
-          <label className="block text-gray-700 mb-2 font-sans">Người liên hệ</label>
+          <label className="block text-gray-700 mb-2 font-body">Người liên hệ</label>
           <div className="flex items-center border rounded px-3 py-2">
             <User className="w-5 h-5 text-gray-400 mr-2" />
-            <input type="text" value={contactName} onChange={e => setContactName(e.target.value)} className="w-full outline-none font-sans" placeholder="Họ và tên" />
+            <input type="text" value={contactName} onChange={e => setContactName(e.target.value)} className="w-full outline-none font-body" placeholder="Họ và tên" />
           </div>
         </div>
         <div className="mb-4">
-          <label className="block text-gray-700 mb-2 font-sans">Email liên hệ</label>
+          <label className="block text-gray-700 mb-2 font-body">Email liên hệ</label>
           <div className="flex items-center border rounded px-3 py-2">
             <Mail className="w-5 h-5 text-gray-400 mr-2" />
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full outline-none font-sans" placeholder="Địa chỉ email" />
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full outline-none font-body" placeholder="Địa chỉ email" />
           </div>
         </div>
         <div className="mb-6">
-          <label className="block text-gray-700 mb-2 font-sans">Mật khẩu</label>
+          <label className="block text-gray-700 mb-2 font-body">Mật khẩu</label>
           <div className="flex items-center border rounded px-3 py-2">
             <Lock className="w-5 h-5 text-gray-400 mr-2" />
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full outline-none font-sans" placeholder="Chọn mật khẩu bảo mật" />
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full outline-none font-body" placeholder="Chọn mật khẩu bảo mật" />
           </div>
         </div>
-        <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded font-semibold hover:bg-blue-700 transition-colors font-sans" disabled={isLoading}>
+        <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded font-semibold hover:bg-blue-700 transition-colors font-body" disabled={isLoading}>
           {isLoading ? 'Đang đăng ký...' : 'Đăng ký'}
         </button>
         <div className="mt-4 flex justify-between text-sm">
-          <Link to="/login" className="text-blue-600 hover:underline font-sans">Đã có tài khoản? Đăng nhập</Link>
+          <Link to="/login" className="text-blue-600 hover:underline font-body">Đã có tài khoản? Đăng nhập</Link>
         </div>
-        <div className="mt-6 text-sm text-gray-500 text-center font-sans">Đăng ký seller sẽ được xác minh trước khi kích hoạt.</div>
+        <div className="mt-6 text-sm text-gray-500 text-center font-body">Đăng ký seller sẽ được xác minh trước khi kích hoạt.</div>
       </form>
     </div>
     </>

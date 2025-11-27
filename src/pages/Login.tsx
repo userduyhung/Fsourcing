@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import authService from '../services/authService';
-import DebugLogger from '../components/DebugLogger';
+// DebugLogger removed - use console.log for debugging
 import Toast from '../components/Toast';
 import { useApiToast } from '../hooks/useApiToast';
 
@@ -184,7 +184,7 @@ const Login: React.FC = () => {
 
   return (
     <>
-      <DebugLogger />
+      {/* DebugLogger removed */}
       {toast.show && (
         <Toast
           message={toast.message}

@@ -102,15 +102,6 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart, paymentQRCodeU
     }
   };
 
-  const refreshFromStorage = async () => {
-    try {
-      const stored = await getCart();
-      setCart(sanitizeCartItems(stored.items as any));
-    } catch (e) {
-      console.error('Failed to refresh cart from storage', e);
-    }
-  };
-
   if (!cart || cart.length === 0) {
     return (
       <div className="bg-gray-50 min-h-screen font-sans flex items-center justify-center">
@@ -210,16 +201,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart, paymentQRCodeU
     <div className="bg-[#f8ecd7] min-h-screen font-sans py-8">
       <main className="max-w-4xl mx-auto px-4">
         <div className="bg-white rounded-lg shadow-lg p-6 md:p-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold">Xác nhận đơn hàng (Mô phỏng)</h2>
-            <button
-              className="text-sm px-3 py-1 border rounded bg-white hover:bg-gray-50"
-              onClick={refreshFromStorage}
-              aria-label="Làm mới giỏ hàng"
-            >
-              Làm mới giỏ hàng
-            </button>
-          </div>
+          <h2 className="text-2xl font-bold mb-4">Xác nhận đơn hàng (Mô phỏng)</h2>
           <div className="grid md:grid-cols-3 gap-6">
             <div className="md:col-span-2">
               <div className="mb-4 bg-gray-50 p-4 rounded">

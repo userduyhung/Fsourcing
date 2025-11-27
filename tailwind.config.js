@@ -4,8 +4,10 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        'heading': ['Poppins', 'sans-serif'],
-        'body': ['Inter', 'sans-serif'],
+        'heading': ['Noto Sans', 'Poppins', 'sans-serif'],
+        'body': ['Noto Sans', 'Inter', 'sans-serif'],
+        // Ensure default sans utility maps to Noto Sans for Vietnamese support
+        sans: ['Noto Sans', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Inter', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
       },
       colors: {
         'tech-blue': '#2563EB',

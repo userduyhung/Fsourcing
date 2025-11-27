@@ -45,11 +45,11 @@ const UnifiedRegister: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-app py-12 px-4 font-sans">
+    <div className="min-h-screen flex items-center justify-center bg-app py-12 px-4 font-body">
       <div className="max-w-4xl w-full space-y-8">
         <div className="text-center">
-          <h2 className="text-3xl font-extrabold text-gray-900 font-sans">Đăng ký Fsourcing</h2>
-          <p className="mt-2 text-lg text-gray-600 font-sans">Chọn vai trò để bắt đầu trên sàn B2B của chúng tôi</p>
+          <h2 className="text-3xl font-extrabold text-gray-900 font-heading">Đăng ký Fsourcing</h2>
+          <p className="mt-2 text-lg text-gray-600 font-body">Chọn vai trò để bắt đầu trên sàn B2B của chúng tôi</p>
         </div>
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {roles.map((role) => {
@@ -70,18 +70,18 @@ const UnifiedRegister: React.FC = () => {
                   <div className={`mx-auto w-16 h-16 bg-${role.color}-100 rounded-full flex items-center justify-center mb-6`}>
                     <Icon className={`w-8 h-8 text-${role.color}-600`} />
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-3 font-sans">{role.title}</h3>
-                  <p className="text-gray-600 mb-6 font-sans">{role.description}</p>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3 font-heading">{role.title}</h3>
+                  <p className="text-gray-600 mb-6 font-body">{role.description}</p>
                   <div className="text-left space-y-3">
                     {role.features.map((feature, index) => (
                       <div key={index} className="flex items-start">
                         <div className={`w-2 h-2 bg-${role.color}-500 rounded-full mt-2 mr-3 flex-shrink-0`}></div>
-                        <span className="text-sm text-gray-700 font-sans">{feature}</span>
+                        <span className="text-sm text-gray-700 font-body">{feature}</span>
                       </div>
                     ))}
                   </div>
                   <button
-                    className={`w-full mt-8 py-3 px-6 rounded-lg font-medium transition-colors font-sans ${bgClass}`}
+                    className={`w-full mt-8 py-3 px-6 rounded-lg font-medium transition-colors font-body ${bgClass}`}
                   >
                     Tham gia với vai trò {role.title}
                   </button>
@@ -94,18 +94,18 @@ const UnifiedRegister: React.FC = () => {
         <div className="text-center">
           <div className="inline-flex items-center px-4 py-2 bg-gray-100 rounded-lg">
             <Shield className="w-4 h-4 text-gray-500 mr-2" />
-            <span className="text-sm text-gray-600 font-sans">
+            <span className="text-sm text-gray-600 font-body">
               Truy cập quản trị?
-              <Link to="/login" className="ml-1 font-medium text-blue-600 hover:text-blue-500 font-sans">
+              <Link to="/login" className="ml-1 font-medium text-blue-600 hover:text-blue-500 font-body">
                 Đăng nhập quản trị
               </Link>
             </span>
           </div>
         </div>
         <div className="text-center">
-          <p className="text-sm text-gray-600 font-sans">
+          <p className="text-sm text-gray-600 font-body">
             Đã có tài khoản?{' '}
-            <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500 font-sans">
+            <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500 font-body">
               Đăng nhập tại đây
             </Link>
           </p>

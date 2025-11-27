@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, Building, Phone, Globe } from 'lucide-react';
 import authService from '../../services/authService';
 import Toast from '../../components/Toast';
-import DebugLogger from '../../components/DebugLogger';
 import { useApiToast } from '../../hooks/useApiToast';
 
 const BuyerRegister: React.FC = () => {
@@ -12,7 +11,7 @@ const BuyerRegister: React.FC = () => {
     company: '',
     email: '',
     phone: '',
-    country: '',
+    country: 'Vietnam',
     password: '',
     confirmPassword: ''
   });
@@ -33,13 +32,18 @@ const BuyerRegister: React.FC = () => {
     const newErrors: {[key: string]: string} = {};
 
     if (!formData.fullName.trim()) newErrors.fullName = 'Họ tên không được để trống';
-    if (!formData.company.trim()) newErrors.company = 'Tên công ty không được để trống';
+    // Company is optional
     if (!formData.email.trim()) {
       newErrors.email = 'Email không được để trống';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email không hợp lệ';
     }
-    if (!formData.phone.trim()) newErrors.phone = 'Số điện thoại không được để trống';
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'Số điện thoại không được để trống';
+    } else {
+      const digits = formData.phone.replace(/\D/g, '');
+      if (digits.length !== 10) newErrors.phone = 'Số điện thoại phải là 10 chữ số';
+    }
     if (!formData.country) newErrors.country = 'Quốc gia không được để trống';
     if (!formData.password) {
       newErrors.password = 'Mật khẩu không được để trống';
@@ -116,7 +120,15 @@ const BuyerRegister: React.FC = () => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+    const { name, value } = e.target as HTMLInputElement;
+    // Live-format phone: keep digits only, limit to 10
+    if (name === 'phone') {
+      const digits = value.replace(/\D/g, '').slice(0, 10);
+      setFormData(prev => ({ ...prev, phone: digits }));
+      if (errors.phone) setErrors(prev => ({ ...prev, phone: '' }));
+      return;
+    }
+
     setFormData(prev => ({ ...prev, [name]: value }));
     // Clear error when user starts typing
     if (errors[name]) {
@@ -126,7 +138,6 @@ const BuyerRegister: React.FC = () => {
 
   return (
     <>
-      <DebugLogger />
       {toast.show && (
         <Toast
           message={toast.message}
@@ -142,19 +153,19 @@ const BuyerRegister: React.FC = () => {
           onClose={() => setShowSuccessToast(false)}
         />
       )}
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-vn">
         <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <Link to="/" className="inline-flex items-center text-2xl font-bold text-blue-600 mb-6 font-sans">
-            <span className="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-2 text-sm font-sans">F</span>
+          <Link to="/" className="inline-flex items-center text-2xl font-bold text-blue-600 mb-6 font-heading">
+            <span className="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-2 text-sm font-heading">F</span>
             Fsourcing
           </Link>
-          <h2 className="text-3xl font-extrabold text-gray-900 font-sans">Đăng ký tài khoản Buyer</h2>
-          <p className="mt-2 text-sm text-gray-600 font-sans">
+          <h2 className="text-3xl font-extrabold text-gray-900 font-heading">Đăng ký tài khoản Buyer</h2>
+          <p className="mt-2 text-sm text-gray-600 font-body">
             Tham gia sàn giao dịch để kết nối với nhà cung cấp toàn cầu
           </p>
-          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-            <p className="text-xs text-yellow-800 font-sans">
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p className="text-xs text-yellow-800 font-body">
               ⚠️ <strong>Lưu ý:</strong> Hệ thống đang dùng in-memory database. Sau khi đăng ký thành công, hãy đăng nhập ngay lập tức. Nếu server restart, bạn cần đăng ký lại.
             </p>
           </div>
@@ -163,7 +174,7 @@ const BuyerRegister: React.FC = () => {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {errors.email && !errors.email.includes('thành công') && (
             <div className="bg-red-50 border border-red-200 rounded-md p-4">
-              <p className="text-red-600 text-sm font-sans">{errors.email}</p>
+              <p className="text-red-600 text-sm font-body">{errors.email}</p>
               {errors.email.includes('đã được đăng ký') && (
                 <Link to="/login" className="text-blue-600 hover:text-blue-500 text-sm font-medium mt-2 inline-block">
                   → Đăng nhập ngay
@@ -171,15 +182,15 @@ const BuyerRegister: React.FC = () => {
               )}
             </div>
           )}
-          {errors.email && errors.email.includes('thành công') && (
+            {errors.email && errors.email.includes('thành công') && (
             <div className="bg-green-50 border border-green-200 rounded-md p-4">
-              <p className="text-green-600 text-sm font-sans">{errors.email}</p>
+              <p className="text-green-600 text-sm font-body">{errors.email}</p>
             </div>
           )}
           <div className="space-y-4">
             {/* Full Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 font-sans">Họ và tên</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1 font-body">Họ và tên</label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
@@ -187,18 +198,18 @@ const BuyerRegister: React.FC = () => {
                   type="text"
                   value={formData.fullName}
                   onChange={handleChange}
-                  className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-sans ${
+                  className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-body ${
                     errors.fullName ? 'border-red-500' : 'border-gray-300'
                   }`}
                   placeholder="Nhập họ và tên"
                 />
               </div>
-              {errors.fullName && <p className="text-red-500 text-xs mt-1 font-sans">{errors.fullName}</p>}
+              {errors.fullName && <p className="text-red-500 text-xs mt-1 font-body">{errors.fullName}</p>}
             </div>
 
             {/* Company */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 font-sans">Tên công ty</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1 font-body">Tên công ty <span className="text-gray-400 text-xs">(tùy chọn)</span></label>
               <div className="relative">
                 <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
@@ -206,18 +217,18 @@ const BuyerRegister: React.FC = () => {
                   type="text"
                   value={formData.company}
                   onChange={handleChange}
-                  className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-sans ${
+                  className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-body ${
                     errors.company ? 'border-red-500' : 'border-gray-300'
                   }`}
                   placeholder="Nhập tên công ty"
                 />
               </div>
-              {errors.company && <p className="text-red-500 text-xs mt-1 font-sans">{errors.company}</p>}
+              {errors.company && <p className="text-red-500 text-xs mt-1 font-body">{errors.company}</p>}
             </div>
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 font-sans">Email</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1 font-body">Email</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
@@ -225,44 +236,48 @@ const BuyerRegister: React.FC = () => {
                   type="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-sans ${
+                  className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-body ${
                     errors.email ? 'border-red-500' : 'border-gray-300'
                   }`}
                   placeholder="Nhập địa chỉ email"
                 />
               </div>
-              {errors.email && <p className="text-red-500 text-xs mt-1 font-sans">{errors.email}</p>}
+              {errors.email && <p className="text-red-500 text-xs mt-1 font-body">{errors.email}</p>}
             </div>
 
             {/* Phone */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 font-sans">Số điện thoại</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1 font-body">Số điện thoại</label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   name="phone"
                   type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={10}
                   value={formData.phone}
                   onChange={handleChange}
-                  className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-sans ${
+                  className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-body ${
                     errors.phone ? 'border-red-500' : 'border-gray-300'
                   }`}
-                  placeholder="Nhập số điện thoại"
+                  placeholder="0xxxxxxxxx"
                 />
               </div>
-              {errors.phone && <p className="text-red-500 text-xs mt-1 font-sans">{errors.phone}</p>}
+              {errors.phone && <p className="text-red-500 text-xs mt-1 font-body">{errors.phone}</p>}
+              {!errors.phone && <p className="text-gray-500 text-xs mt-1 font-body">Nhập 10 chữ số, ví dụ: 0912345678</p>}
             </div>
 
             {/* Country */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 font-sans">Quốc gia</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1 font-body">Quốc gia</label>
               <div className="relative">
                 <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <select
                   name="country"
                   value={formData.country}
                   onChange={handleChange}
-                  className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-sans ${
+                  className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-body ${
                     errors.country ? 'border-red-500' : 'border-gray-300'
                   }`}
                 >
@@ -272,12 +287,12 @@ const BuyerRegister: React.FC = () => {
                   ))}
                 </select>
               </div>
-              {errors.country && <p className="text-red-500 text-xs mt-1 font-sans">{errors.country}</p>}
+              {errors.country && <p className="text-red-500 text-xs mt-1 font-body">{errors.country}</p>}
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 font-sans">Mật khẩu</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1 font-body">Mật khẩu</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
@@ -285,7 +300,7 @@ const BuyerRegister: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={handleChange}
-                  className={`w-full pl-10 pr-12 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-sans ${
+                  className={`w-full pl-10 pr-12 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-body ${
                     errors.password ? 'border-red-500' : 'border-gray-300'
                   }`}
                   placeholder="Tạo mật khẩu"
@@ -298,12 +313,12 @@ const BuyerRegister: React.FC = () => {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
-              {errors.password && <p className="text-red-500 text-xs mt-1 font-sans">{errors.password}</p>}
+              {errors.password && <p className="text-red-500 text-xs mt-1 font-body">{errors.password}</p>}
             </div>
 
             {/* Confirm Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 font-sans">Xác nhận mật khẩu</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1 font-body">Xác nhận mật khẩu</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
@@ -311,7 +326,7 @@ const BuyerRegister: React.FC = () => {
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className={`w-full pl-10 pr-12 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-sans ${
+                  className={`w-full pl-10 pr-12 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-body ${
                     errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
                   }`}
                   placeholder="Nhập lại mật khẩu"
@@ -324,22 +339,22 @@ const BuyerRegister: React.FC = () => {
                   {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
-              {errors.confirmPassword && <p className="text-red-500 text-xs mt-1 font-sans">{errors.confirmPassword}</p>}
+              {errors.confirmPassword && <p className="text-red-500 text-xs mt-1 font-body">{errors.confirmPassword}</p>}
             </div>
           </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-sans"
+            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-body"
           >
             {isLoading ? 'Đang tạo tài khoản...' : 'Tạo tài khoản'}
           </button>
 
           <div className="text-center">
-            <p className="text-sm text-gray-600 font-sans">
+            <p className="text-sm text-gray-600 font-body">
               Đã có tài khoản?{' '}
-              <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500 font-sans">
+              <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500 font-body">
                 Đăng nhập tại đây
               </Link>
             </p>
