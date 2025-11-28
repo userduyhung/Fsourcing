@@ -55,12 +55,32 @@ const PaymentSuccess: React.FC<PaymentSuccessProps> = ({ orderId, amount, transa
         }
 
         const buyerProfile = JSON.parse(buyerProfileStr);
-        const { email, name } = buyerProfile;
+        const { email, name, address } = buyerProfile;
 
         if (!email) {
           console.warn('Không có email trong buyerProfile');
           return;
         }
+
+        // LƯU ĐỢN HÀNG VÀO LOCALSTORAGE
+        const newOrder = {
+          id: Date.now(),
+          items: cartItems,
+          total: demoAmount,
+          address: address || 'Đang cập nhật',
+          date: orderDate,
+          orderId: demoOrderId,
+          status: 'pending', // pending, completed, cancelled
+          estimatedDelivery: estimatedDelivery
+        };
+
+        // Lấy danh sách đơn hàng hiện tại
+        const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+        // Thêm đơn hàng mới vào đầu mảng
+        existingOrders.unshift(newOrder);
+        // Lưu lại vào localStorage
+        localStorage.setItem('orders', JSON.stringify(existingOrders));
+        console.log('💾 Order saved to localStorage:', newOrder);
 
         // SỬ DỤNG CART ITEMS TỪ LOCATION.STATE (đã được truyền từ CheckoutPage)
         console.log('📦 Cart items from checkout:', cartItems);
@@ -86,7 +106,7 @@ const PaymentSuccess: React.FC<PaymentSuccessProps> = ({ orderId, amount, transa
           totalAmount: demoAmount,
           items: orderItems,
           paymentMethod: 'Chuyển khoản ngân hàng (VietQR)',
-          shippingAddress: 'Đang cập nhật'
+          shippingAddress: address || 'Đang cập nhật'
         });
 
         if (result.success) {

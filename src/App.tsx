@@ -404,6 +404,11 @@ function App() {
               <OrderDetail />
             </BuyerProtectedRoute>
           } />
+          <Route path="/buyer/orders" element={
+            <BuyerProtectedRoute>
+              <OrderDetail />
+            </BuyerProtectedRoute>
+          } />
           <Route path="/buyer/seller-detail/:id" element={<SellerDetail />} />
           <Route path="/seller-detail/:id" element={<SellerDetail />} />
           <Route path="/buyer/payment-success" element={

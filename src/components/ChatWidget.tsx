@@ -1,11 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Sparkles } from 'lucide-react';
+import { sendMessageToGemini, isGeminiConfigured } from '../services/geminiService';
 
 const ChatWidget: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<{ from: 'user' | 'bot'; text: string }[]>([]);
   const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const isAIEnabled = isGeminiConfigured();
 
   useEffect(() => {
     if (open && messagesEndRef.current) {
@@ -14,21 +17,46 @@ const ChatWidget: React.FC = () => {
     }
   }, [messages]);
 
-  const sendMessage = (text: string) => {
+  const sendMessage = async (text: string) => {
     if (!text.trim()) return;
     setMessages((m) => [...m, { from: 'user', text }]);
     setInput('');
+    setIsLoading(true);
 
-    // Phản hồi bot mô phỏng
-    setTimeout(() => {
-      const lower = text.toLowerCase();
-      let reply = "Tôi sẵn sàng hỗ trợ bạn! Bạn có thể hỏi về nhà cung cấp, sản phẩm hoặc cách đăng ký.";
-      if (lower.includes('giá')) reply = 'Giá sẽ thay đổi theo nhà cung cấp và số lượng. Bạn quan tâm đến sản phẩm nào?';
-      if (lower.includes('đăng ký') || lower.includes('tham gia')) reply = 'Để đăng ký, hãy nhấn Đăng ký (góc trên bên phải) hoặc truy cập /join.';
-      if (lower.includes('nhà cung cấp')) reply = 'Để trở thành nhà cung cấp, hãy vào trang đăng ký nhà cung cấp. Bạn có muốn tôi mở trang đó cho bạn không?';
+    try {
+      if (isAIEnabled) {
+        // Sử dụng Gemini AI
+        const response = await sendMessageToGemini(text);
+        
+        setTimeout(() => {
+          setMessages((m) => [...m, { 
+            from: 'bot', 
+            text: response.success ? response.message : '⚠️ ' + response.message 
+          }]);
+          setIsLoading(false);
+        }, 500); // Delay nhỏ để trải nghiệm tự nhiên hơn
+      } else {
+        // Fallback: Bot mô phỏng (khi chưa có API key)
+        setTimeout(() => {
+          const lower = text.toLowerCase();
+          let reply = "Tôi sẵn sàng hỗ trợ bạn! Bạn có thể hỏi về nhà cung cấp, sản phẩm hoặc cách đăng ký.";
+          if (lower.includes('giá')) reply = 'Giá sẽ thay đổi theo nhà cung cấp và số lượng. Bạn quan tâm đến sản phẩm nào?';
+          if (lower.includes('đăng ký') || lower.includes('tham gia')) reply = 'Để đăng ký, hãy nhấn Đăng ký (góc trên bên phải) hoặc truy cập /register.';
+          if (lower.includes('nhà cung cấp')) reply = 'Để trở thành nhà cung cấp, hãy vào trang đăng ký nhà cung cấp. Bạn có muốn tôi mở trang đó cho bạn không?';
+          if (lower.includes('phí ship') || lower.includes('giao hàng')) reply = 'Phí giao hàng: TP.HCM miễn phí 🎉, Miền Nam 5,000đ, Miền Trung 7,000đ, Miền Bắc 10,000đ.';
 
-      setMessages((m) => [...m, { from: 'bot', text: reply }]);
-    }, 700);
+          setMessages((m) => [...m, { from: 'bot', text: reply }]);
+          setIsLoading(false);
+        }, 700);
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+      setMessages((m) => [...m, { 
+        from: 'bot', 
+        text: '⚠️ Đã xảy ra lỗi. Vui lòng thử lại sau.' 
+      }]);
+      setIsLoading(false);
+    }
   };
 
   const onSubmit = (e: React.FormEvent) => {
@@ -40,19 +68,48 @@ const ChatWidget: React.FC = () => {
     <div className="fixed bottom-6 right-6 z-50 font-sans">
       {open ? (
         <div className="w-80 bg-white rounded-xl shadow-xl overflow-hidden flex flex-col font-sans">
-          <div className="bg-blue-600 text-white px-4 py-3 flex items-center justify-between font-sans">
-            <div className="font-semibold font-sans">Trợ lý Fsourcing</div>
-            <button onClick={() => setOpen(false)} className="text-white">×</button>
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-3 flex items-center justify-between font-sans">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold font-sans">Trợ lý Fsourcing</span>
+              {isAIEnabled && <Sparkles className="w-4 h-4 text-yellow-300" title="Powered by Gemini AI" />}
+            </div>
+            <button onClick={() => setOpen(false)} className="text-white hover:bg-white/20 rounded px-2">×</button>
           </div>
           <div className="flex-1 p-4 overflow-y-auto font-sans" style={{ maxHeight: 320 }}>
             {messages.length === 0 ? (
-              <div className="text-gray-500 text-sm font-sans">Chào bạn! Hãy đặt câu hỏi để được hỗ trợ.</div>
+              <div className="space-y-3">
+                <div className="text-gray-500 text-sm font-sans">
+                  Chào bạn! Tôi là trợ lý ảo của Fsourcing {isAIEnabled && '🤖'}.
+                </div>
+                <div className="text-xs text-gray-400 font-sans">
+                  Bạn có thể hỏi về:
+                  <ul className="mt-2 space-y-1 ml-4">
+                    <li>• Sản phẩm và giá cả</li>
+                    <li>• Phí giao hàng</li>
+                    <li>• Cách đăng ký tài khoản</li>
+                    <li>• Quy trình mua hàng</li>
+                  </ul>
+                </div>
+              </div>
             ) : (
               messages.map((m, idx) => (
                 <div key={idx} className={`mb-2 flex ${m.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`px-3 py-2 rounded-lg text-sm font-sans ${m.from === 'user' ? 'bg-blue-100 text-blue-900' : 'bg-gray-100 text-gray-800'}`}>{m.text}</div>
+                  <div className={`px-3 py-2 rounded-lg text-sm font-sans max-w-[85%] ${m.from === 'user' ? 'bg-blue-100 text-blue-900' : 'bg-gray-100 text-gray-800'}`}>
+                    {m.text}
+                  </div>
                 </div>
               ))
+            )}
+            {isLoading && (
+              <div className="flex justify-start mb-2">
+                <div className="px-3 py-2 rounded-lg text-sm font-sans bg-gray-100 text-gray-800">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  </div>
+                </div>
+              </div>
             )}
             <div ref={messagesEndRef} />
           </div>
@@ -62,8 +119,15 @@ const ChatWidget: React.FC = () => {
               placeholder="Nhập tin nhắn..."
               value={input}
               onChange={e => setInput(e.target.value)}
+              disabled={isLoading}
             />
-            <button type="submit" className="px-4 py-2 bg-blue-600 text-white font-semibold font-sans">Gửi</button>
+            <button 
+              type="submit" 
+              className="px-4 py-2 bg-blue-600 text-white font-semibold font-sans hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+              disabled={isLoading}
+            >
+              {isLoading ? '...' : 'Gửi'}
+            </button>
           </form>
         </div>
       ) : (
