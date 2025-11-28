@@ -173,18 +173,33 @@ class AuthService {
       console.log('Payload:', data);
       const result = await apiClient.authApi.register(data);
 
-      // Note: many register endpoints do not auto-login; we return whatever the API returns
       console.log('==== REGISTER RESPONSE (apiClient) ====');
       console.log('Response Data:', result);
-      console.log('===========================');
 
-      return result;
+      // Normalize the registration response
+      const normalized = this.normalizeAuthResponse(result);
+      
+      console.log('==== NORMALIZED REGISTER RESPONSE ====');
+      console.log('Has token:', !!normalized.token);
+      console.log('Has user:', !!normalized.user);
+      console.log('Message:', normalized.message);
+      console.log('======================================');
+
+      // Return normalized response with success indicator
+      return {
+        ...normalized,
+        success: true,
+        message: normalized.message || 'Đăng ký thành công!'
+      };
     } catch (error: any) {
       console.error('==== REGISTER ERROR ====');
       console.error('Error:', error?.response?.data || error?.message || error);
       console.error('=======================');
       if (error?.response?.status === 409) {
         throw new Error('Email này đã được đăng ký. Vui lòng sử dụng email khác hoặc đăng nhập.');
+      }
+      if (error?.response?.data?.message) {
+        throw new Error(error.response.data.message);
       }
       if (error instanceof Error) {
         throw error;

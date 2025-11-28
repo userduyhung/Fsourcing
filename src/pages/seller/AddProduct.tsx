@@ -38,6 +38,7 @@ const AddProduct: React.FC = () => {
     // If there is a file, upload using FormData
     if (imageFile) {
       try {
+        /* API TEMPORARILY DISABLED - USING LOCAL STORAGE ONLY
         const formData = new FormData();
         formData.append('Name', newProductPayload.name);
         formData.append('Description', newProductPayload.description || '');
@@ -62,6 +63,26 @@ const AddProduct: React.FC = () => {
           }
         });
         created = resp?.data?.data ?? resp?.data ?? resp;
+        */
+        
+        // Local storage fallback with fake upload
+        setIsUploading(true);
+        await new Promise(resolve => setTimeout(resolve, 1000)); // fake delay
+        const reader = new FileReader();
+        reader.readAsDataURL(imageFile);
+        await new Promise(resolve => {
+            reader.onloadend = () => {
+                newProductPayload.image = reader.result as string;
+                resolve(null);
+            };
+        });
+        
+        const localProducts = localStorage.getItem('sellerProducts');
+        const items = localProducts ? JSON.parse(localProducts) : [];
+        created = { ...newProductPayload, id: Date.now(), status: 'active' };
+        items.push(created);
+        localStorage.setItem('sellerProducts', JSON.stringify(items));
+        
       } catch (err: any) {
         console.error('FormData upload failed', err);
         setErrorMsg('Tải ảnh thất bại — kiểm tra kết nối hoặc thử lại.');
@@ -73,7 +94,17 @@ const AddProduct: React.FC = () => {
     } else {
       // No file: use JSON API create
       try {
+        /* API TEMPORARILY DISABLED - USING LOCAL STORAGE ONLY
         created = await apiClient.productsApi.create(newProductPayload);
+        */
+        
+        // Local storage fallback
+        const localProducts = localStorage.getItem('sellerProducts');
+        const items = localProducts ? JSON.parse(localProducts) : [];
+        created = { ...newProductPayload, id: Date.now(), status: 'active' };
+        items.push(created);
+        localStorage.setItem('sellerProducts', JSON.stringify(items));
+        
       } catch (err: any) {
         console.error('API create product failed', err);
         setErrorMsg('Không thể tạo sản phẩm: lỗi máy chủ hoặc mất kết nối. Vui lòng thử lại.');

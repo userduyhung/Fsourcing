@@ -53,8 +53,10 @@ const SellerRegister: React.FC = () => {
       console.log('========================================');
 
       // Check if registration successful based on actual backend response
-      // Backend returns: {success: true, message: "...", data: {id, email, role}}
-      if (response.success === true || (response.data && response.data.id)) {
+      // Backend may return several formats: {success: true, data: {id}}, or {data: {user: {id}}}, or normalized {user: {id}}
+      const r: any = response as any;
+      const registeredId = r?.user?.id || r?.data?.id || r?.data?.user?.id || r?.id;
+      if (response.success === true || registeredId) {
         // Show success toast
         setShowSuccessToast(true);
         showSuccess('Đăng ký Seller thành công! Đang chuyển đến trang đăng nhập...');
@@ -62,6 +64,11 @@ const SellerRegister: React.FC = () => {
         // Store credentials temporarily for auto-fill on login page
         sessionStorage.setItem('registeredEmail', email);
         sessionStorage.setItem('registeredPassword', password);
+        // Store contact name for display after login
+        sessionStorage.setItem('registeredFullName', contactName);
+        sessionStorage.setItem('registeredCompany', company);
+        // Store returned id when available
+        if (registeredId) sessionStorage.setItem('registeredId', String(registeredId));
 
         // Wait 5 seconds before redirecting to login
         setTimeout(() => {

@@ -16,9 +16,34 @@ const SellerDashboard: React.FC = () => {
     let mounted = true;
     (async () => {
       try {
+        /* API TEMPORARILY DISABLED - USING LOCAL STORAGE ONLY
         const resp = await (await import('../../services/apiClient')).default.productsApi.list();
-        const items = Array.isArray(resp) ? resp : (resp?.data || resp?.items || []);
+        // Normalize response to an array of items. The generated client may return
+        // different shapes, for example: a plain array, { data: [...] },
+        // { items: [...] } or { data: { items: [...] } }.
+        let items: any[] = [];
+        const anyResp: any = resp;
+        if (Array.isArray(anyResp)) {
+          items = anyResp;
+        } else if (Array.isArray(anyResp?.data)) {
+          items = anyResp.data;
+        } else if (Array.isArray(anyResp?.items)) {
+          items = anyResp.items;
+        } else if (Array.isArray(anyResp?.data?.items)) {
+          items = anyResp.data.items;
+        } else {
+          items = [];
+        }
         if (mounted) setProducts(items);
+        */
+        
+        // Local storage fallback
+        const localProducts = localStorage.getItem('sellerProducts');
+        if (localProducts) {
+          setProducts(JSON.parse(localProducts));
+        } else {
+          setProducts([]);
+        }
       } catch (err) {
         console.warn('Failed to fetch seller products for dashboard', err);
         if (mounted) setProducts([]);
@@ -36,24 +61,36 @@ const SellerDashboard: React.FC = () => {
           <div className="bg-white rounded-lg shadow p-8 text-center">
             <h2 className="text-2xl font-bold mb-4">Chào mừng Seller mới!</h2>
             <p className="text-gray-600 mb-6">Bạn vừa tạo tài khoản Seller — bảng điều khiển của bạn còn trống. Bắt đầu bằng cách thêm thông tin cửa hàng và tạo sản phẩm đầu tiên.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-4 border rounded">
-                <FaUserCircle className="mx-auto w-12 h-12 text-blue-400 mb-3" />
-                <h4 className="font-semibold mb-2">Hoàn thiện hồ sơ</h4>
-                <p className="text-sm text-gray-500 mb-3">Thêm tên công ty, thông tin liên hệ và mô tả cửa hàng.</p>
-                <Link to="/seller/profile" className="inline-block bg-blue-600 text-white px-4 py-2 rounded">Chỉnh sửa hồ sơ</Link>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-stretch">
+              <div className="p-4 border rounded flex flex-col items-center justify-between h-full">
+                <div className="w-full">
+                  <FaUserCircle className="mx-auto w-12 h-12 text-blue-400 mb-3" />
+                  <h4 className="font-semibold mb-2 text-center">Hoàn thiện hồ sơ</h4>
+                  <p className="text-sm text-gray-500 mb-3 text-center">Thêm tên công ty, thông tin liên hệ và mô tả cửa hàng.</p>
+                </div>
+                <div className="w-full text-center mt-2">
+                  <Link to="/seller/profile" className="inline-block bg-blue-600 text-white px-4 py-2 rounded">Chỉnh sửa hồ sơ</Link>
+                </div>
               </div>
-              <div className="p-4 border rounded">
-                <FaBoxOpen className="mx-auto w-12 h-12 text-green-400 mb-3" />
-                <h4 className="font-semibold mb-2">Tạo sản phẩm</h4>
-                <p className="text-sm text-gray-500 mb-3">Tạo sản phẩm đầu tiên để bắt đầu bán hàng trên nền tảng.</p>
-                <button onClick={() => navigate('/seller/add-product')} className="inline-block bg-green-600 text-white px-4 py-2 rounded">Thêm sản phẩm</button>
+              <div className="p-4 border rounded flex flex-col items-center justify-between h-full">
+                <div className="w-full">
+                  <FaBoxOpen className="mx-auto w-12 h-12 text-green-400 mb-3" />
+                  <h4 className="font-semibold mb-2 text-center">Tạo sản phẩm</h4>
+                  <p className="text-sm text-gray-500 mb-3 text-center">Tạo sản phẩm đầu tiên để bắt đầu bán hàng trên nền tảng.</p>
+                </div>
+                <div className="w-full text-center mt-2">
+                  <button onClick={() => navigate('/seller/add-product')} className="inline-block bg-green-600 text-white px-4 py-2 rounded">Thêm sản phẩm</button>
+                </div>
               </div>
-              <div className="p-4 border rounded">
-                <FaClipboardList className="mx-auto w-12 h-12 text-orange-400 mb-3" />
-                <h4 className="font-semibold mb-2">Quản lý đơn hàng</h4>
-                <p className="text-sm text-gray-500 mb-3">Khi có đơn hàng, chúng sẽ xuất hiện tại đây.</p>
-                <Link to="/seller/orders" className="inline-block bg-orange-600 text-white px-4 py-2 rounded">Xem đơn hàng</Link>
+              <div className="p-4 border rounded flex flex-col items-center justify-between h-full">
+                <div className="w-full">
+                  <FaClipboardList className="mx-auto w-12 h-12 text-orange-400 mb-3" />
+                  <h4 className="font-semibold mb-2 text-center">Quản lý đơn hàng</h4>
+                  <p className="text-sm text-gray-500 mb-3 text-center">Khi có đơn hàng, chúng sẽ xuất hiện tại đây.</p>
+                </div>
+                <div className="w-full text-center mt-2">
+                  <Link to="/seller/orders" className="inline-block bg-orange-600 text-white px-4 py-2 rounded">Xem đơn hàng</Link>
+                </div>
               </div>
             </div>
           </div>

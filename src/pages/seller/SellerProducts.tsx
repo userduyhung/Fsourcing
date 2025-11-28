@@ -28,8 +28,15 @@ const SellerProducts: React.FC = () => {
       setLoading(true);
       setErrorMsg(null);
       try {
+        /* API TEMPORARILY DISABLED - USING LOCAL STORAGE ONLY
         const resp = await apiClient.productsApi.list();
         const items = Array.isArray(resp) ? resp : (resp?.data || resp?.items || []);
+        if (mounted) setProducts(items);
+        */
+        
+        // Local storage fallback
+        const localProducts = localStorage.getItem('sellerProducts');
+        const items = localProducts ? JSON.parse(localProducts) : [];
         if (mounted) setProducts(items);
       } catch (err: any) {
         console.error('Failed to fetch products from API', err);
@@ -75,7 +82,18 @@ const SellerProducts: React.FC = () => {
     setErrorMsg(null);
     try {
       // call API to delete
+      /* API TEMPORARILY DISABLED - USING LOCAL STORAGE ONLY
       await apiClient.request('delete', `/products/${deleteId}`);
+      */
+      
+      // Local storage fallback
+      const localProducts = localStorage.getItem('sellerProducts');
+      if (localProducts) {
+        const items = JSON.parse(localProducts);
+        const newItems = items.filter((p: any) => p.id !== deleteId);
+        localStorage.setItem('sellerProducts', JSON.stringify(newItems));
+      }
+
       // on success remove from UI
       setProducts(prev => prev.filter(p => p.id !== deleteId));
       try {

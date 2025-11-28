@@ -58,9 +58,9 @@ const ProductCard: React.FC<ProductCardProps & { onAddToCart?: (product: any) =>
       });
 
       // Also call the local callback for backward compatibility
-      if (onAddToCart) {
-        onAddToCart({ id: id!, name, price: numeric, image });
-      }
+      // if (onAddToCart) {
+      //   onAddToCart({ id: id!, name, price: numeric, image });
+      // }
 
       showAppToast('Đã thêm vào giỏ hàng', 'success', 1200);
     } catch (error) {

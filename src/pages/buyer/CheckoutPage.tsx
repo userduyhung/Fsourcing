@@ -4,6 +4,8 @@ import { CartItem } from '../../types';
 import QRCode from 'react-qr-code';
 import { getCart, clearCart } from '../../services/cartService';
 import { sanitizeCartItems } from '../../utils/cartValidation';
+import { validateAddress, validatePayment, validateVietQRConfig, validateCart } from '../../utils/purchaseValidation';
+import showAppToast from '../../utils/toast';
 
 const currency = (v: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
 
@@ -13,14 +15,70 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart, paymentQRCodeU
   const navigate = useNavigate();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [address, setAddress] = useState('');
+  
+  // Address selection states
+  const [provinces, setProvinces] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<any[]>([]);
+  const [wards, setWards] = useState<any[]>([]);
+  const [selectedProvince, setSelectedProvince] = useState('');
+  const [selectedDistrict, setSelectedDistrict] = useState('');
+  const [selectedWard, setSelectedWard] = useState('');
+  const [street, setStreet] = useState('');
+
+  useEffect(() => {
+    fetch('https://provinces.open-api.vn/api/?depth=1')
+      .then(res => res.json())
+      .then(data => setProvinces(data))
+      .catch(err => console.error(err));
+  }, []);
+
+  useEffect(() => {
+    if (selectedProvince) {
+      fetch(`https://provinces.open-api.vn/api/p/${selectedProvince}?depth=2`)
+        .then(res => res.json())
+        .then(data => setDistricts(data.districts))
+        .catch(err => console.error(err));
+    } else {
+      setDistricts([]);
+    }
+    setSelectedDistrict('');
+    setWards([]);
+    setSelectedWard('');
+  }, [selectedProvince]);
+
+  useEffect(() => {
+    if (selectedDistrict) {
+      fetch(`https://provinces.open-api.vn/api/d/${selectedDistrict}?depth=2`)
+        .then(res => res.json())
+        .then(data => setWards(data.wards))
+        .catch(err => console.error(err));
+    } else {
+      setWards([]);
+    }
+    setSelectedWard('');
+  }, [selectedDistrict]);
+
+  useEffect(() => {
+    if (selectedProvince && selectedDistrict && selectedWard && street) {
+      const p = provinces.find(x => x.code == selectedProvince)?.name;
+      const d = districts.find(x => x.code == selectedDistrict)?.name;
+      const w = wards.find(x => x.code == selectedWard)?.name;
+      if (p && d && w) {
+        setAddress(`${street}, ${w}, ${d}, ${p}`);
+      }
+    } else {
+      setAddress('');
+    }
+  }, [selectedProvince, selectedDistrict, selectedWard, street, provinces, districts, wards]);
+
   const [showPayment, setShowPayment] = useState(false);
   const [paymentRef, setPaymentRef] = useState<string | null>(null);
   const [externalQRCodeUrl, setExternalQRCodeUrl] = useState<string | null>(null);
   const [loadingRef, setLoadingRef] = useState(false);
   const [refError, setRefError] = useState<string | null>(null);
 
-  // Fixed QR code URL
-  const PAYMENT_QR_URL = 'https://res.cloudinary.com/dcworyvtj/image/upload/v1764134757/thongtinthanhtoan_zjdrbl.jpg';
+  // Fixed QR code URL (Old static method - commented out)
+  // const PAYMENT_QR_URL = 'https://res.cloudinary.com/dcworyvtj/image/upload/v1764134757/thongtinthanhtoan_zjdrbl.jpg';
 
   useEffect(() => {
     let mounted = true;
@@ -49,8 +107,50 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart, paymentQRCodeU
 
   const total = cart.reduce((sum, item) => sum + (Number(item.price) || 0) * (item.quantity || 0), 0);
 
+  // VietQR API Configuration (moved after total calculation)
+  const VIETQR_CONFIG = {
+    accountNo: '100876738714',
+    accountName: 'NGUYEN DUY HUNG',
+    acqId: '970415',  // Mã ngân hàng Vietinbank
+    amount: total,
+    addInfo: `FSOURCING ${Date.now().toString().slice(-6)}`,  // Nội dung chuyển khoản
+    format: 'text',
+    template: 'compact'
+  };
+
   const createLocalPaymentRef = async () => {
-    if (!address.trim()) return;
+    // Validate address components
+    const addressValidation = validateAddress(
+      provinces.find(p => p.code == selectedProvince)?.name || '',
+      districts.find(d => d.code == selectedDistrict)?.name || '',
+      wards.find(w => w.code == selectedWard)?.name || '',
+      street
+    );
+    
+    if (!addressValidation.isValid) {
+      showAppToast(addressValidation.errors[0] || 'Địa chỉ không hợp lệ', 'error', 2500);
+      return;
+    }
+    
+    // Validate cart before payment
+    const cartValidation = validateCart(cart);
+    if (!cartValidation.isValid) {
+      showAppToast(cartValidation.errors[0] || 'Giỏ hàng có lỗi', 'error', 2500);
+      return;
+    }
+    
+    // Validate payment details
+    const paymentValidation = validatePayment(cart, address, total);
+    if (!paymentValidation.isValid) {
+      showAppToast(paymentValidation.errors[0] || 'Thông tin thanh toán không hợp lệ', 'error', 2500);
+      return;
+    }
+    
+    // Show warnings if any
+    if (paymentValidation.warnings.length > 0) {
+      showAppToast(paymentValidation.warnings[0], 'warning', 2500);
+    }
+    
     setShowPayment(true);
     setRefError(null);
     setLoadingRef(true);
@@ -69,12 +169,50 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart, paymentQRCodeU
         return;
       }
 
-      // Use fixed payment QR URL
-      await new Promise((r) => setTimeout(r, 600));
-      setPaymentRef(PAYMENT_QR_URL);
+      // OLD METHOD: Use fixed payment QR URL
+      // await new Promise((r) => setTimeout(r, 600));
+      // setPaymentRef(PAYMENT_QR_URL);
+
+      // NEW METHOD: Generate dynamic QR using VietQR API
+      const vietQRPayload = {
+        accountNo: VIETQR_CONFIG.accountNo,
+        accountName: VIETQR_CONFIG.accountName,
+        acqId: VIETQR_CONFIG.acqId,
+        amount: VIETQR_CONFIG.amount,
+        addInfo: VIETQR_CONFIG.addInfo,
+        format: VIETQR_CONFIG.format,
+        template: VIETQR_CONFIG.template
+      };
+      
+      // Validate VietQR config before API call
+      const qrValidation = validateVietQRConfig(vietQRPayload);
+      if (!qrValidation.isValid) {
+        throw new Error(qrValidation.errors[0] || 'Cấu hình VietQR không hợp lệ');
+      }
+
+      const vietQRResponse = await fetch('https://api.vietqr.io/v2/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(vietQRPayload)
+      });
+
+      if (!vietQRResponse.ok) {
+        throw new Error('VietQR API không phản hồi');
+      }
+
+      const vietQRData = await vietQRResponse.json();
+      
+      if (vietQRData.code === '00' && vietQRData.data?.qrDataURL) {
+        // VietQR trả về base64 image
+        setPaymentRef(vietQRData.data.qrDataURL);
+      } else {
+        throw new Error(vietQRData.desc || 'Không thể tạo mã QR');
+      }
     } catch (e: any) {
-      console.error('Failed to create local payment ref', e);
-      setRefError('Không thể tạo mã thanh toán (mô phỏng).');
+      console.error('Failed to create payment QR:', e);
+      setRefError(`Không thể tạo mã thanh toán: ${e.message || 'Lỗi không xác định'}`);
     } finally {
       setLoadingRef(false);
     }
@@ -172,9 +310,10 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart, paymentQRCodeU
                 {(externalQRCodeUrl || paymentQRCodeUrl) ? (
                   <img src={externalQRCodeUrl || paymentQRCodeUrl || undefined} alt="QR Payment" className="max-w-full h-auto object-contain" />
                 ) : paymentRef ? (
-                  // Check if paymentRef is an image URL
-                  (paymentRef.startsWith('http://') || paymentRef.startsWith('https://')) && 
-                  (paymentRef.includes('.jpg') || paymentRef.includes('.jpeg') || paymentRef.includes('.png') || paymentRef.includes('.gif') || paymentRef.includes('.webp')) ? (
+                  // Check if paymentRef is a base64 image or URL
+                  (paymentRef.startsWith('data:image') || 
+                   ((paymentRef.startsWith('http://') || paymentRef.startsWith('https://')) && 
+                    (paymentRef.includes('.jpg') || paymentRef.includes('.jpeg') || paymentRef.includes('.png') || paymentRef.includes('.gif') || paymentRef.includes('.webp')))) ? (
                     <img src={paymentRef} alt="QR Payment" className="max-w-full h-auto object-contain" />
                   ) : (
                     <QRCode value={paymentRef} size={180} />
@@ -183,7 +322,13 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart, paymentQRCodeU
                   <div className="text-sm text-gray-500">Mã thanh toán đang được tạo...</div>
                 )}
               </div>
-              <div className="mt-4 text-gray-500 text-sm text-center">Quét mã QR bằng ứng dụng ngân hàng để mô phỏng thanh toán.</div>
+              <div className="mt-4 text-gray-500 text-sm text-center">
+                Quét mã QR bằng ứng dụng ngân hàng để thanh toán.
+                <div className="text-xs mt-2">
+                  <strong>Số tiền:</strong> {currency(total)}<br/>
+                  <strong>Nội dung:</strong> FSOURCING {Date.now().toString().slice(-6)}
+                </div>
+              </div>
               <button className="mt-4 w-full bg-green-600 text-white py-2 rounded" onClick={handleSimulatePayment}>
                 Đã thanh toán (Mô phỏng)
               </button>
@@ -224,15 +369,61 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart, paymentQRCodeU
               </div>
 
               <div className="mb-4">
-                <label htmlFor="address" className="block font-medium mb-2">Địa chỉ giao hàng</label>
-                <input
-                  id="address"
-                  type="text"
-                  className="w-full border border-gray-300 rounded px-3 py-2"
-                  value={address}
-                  onChange={e => setAddress(e.target.value)}
-                  placeholder="Nhập địa chỉ giao hàng..."
-                />
+                <label className="block font-medium mb-2">Địa chỉ giao hàng</label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Tỉnh / Thành phố</label>
+                    <select 
+                      className="w-full border border-gray-300 rounded px-3 py-2"
+                      value={selectedProvince}
+                      onChange={e => setSelectedProvince(e.target.value)}
+                    >
+                      <option value="">Chọn Tỉnh/Thành</option>
+                      {provinces.map(p => (
+                        <option key={p.code} value={p.code}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Quận / Huyện</label>
+                    <select 
+                      className="w-full border border-gray-300 rounded px-3 py-2"
+                      value={selectedDistrict}
+                      onChange={e => setSelectedDistrict(e.target.value)}
+                      disabled={!selectedProvince}
+                    >
+                      <option value="">Chọn Quận/Huyện</option>
+                      {districts.map(d => (
+                        <option key={d.code} value={d.code}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Phường / Xã</label>
+                    <select 
+                      className="w-full border border-gray-300 rounded px-3 py-2"
+                      value={selectedWard}
+                      onChange={e => setSelectedWard(e.target.value)}
+                      disabled={!selectedDistrict}
+                    >
+                      <option value="">Chọn Phường/Xã</option>
+                      {wards.map(w => (
+                        <option key={w.code} value={w.code}>{w.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">Số nhà, tên đường</label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded px-3 py-2"
+                    value={street}
+                    onChange={e => setStreet(e.target.value)}
+                    placeholder="Ví dụ: 123 Đường Nguyễn Huệ"
+                  />
+                </div>
+                {address && <div className="mt-2 text-sm text-gray-500 italic">Địa chỉ đầy đủ: {address}</div>}
               </div>
             </div>
 

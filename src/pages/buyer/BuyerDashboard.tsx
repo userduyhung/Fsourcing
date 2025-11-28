@@ -21,7 +21,7 @@ const BuyerDashboard: React.FC = () => {
   const stats = [
     { title: 'RFQ đang hoạt động', value: '8', change: '+2 tuần này', icon: FileText, color: 'bg-gradient-to-r from-blue-500 to-blue-400' },
     { title: 'Nhà cung cấp đã lưu', value: '12', change: '+3 mới', icon: Users, color: 'bg-gradient-to-r from-green-500 to-green-400' },
-    { title: 'Tin nhắn', value: '3', change: 'Chưa đọc', icon: MessageCircle, color: 'bg-gradient-to-r from-purple-500 to-purple-400', link: '/buyer/chat' },
+    // { title: 'Tin nhắn', value: '3', change: 'Chưa đọc', icon: MessageCircle, color: 'bg-gradient-to-r from-purple-500 to-purple-400', link: '/buyer/chat' },
     { title: 'Thông báo', value: '3', change: 'Chưa đọc', icon: Bell, color: 'bg-gradient-to-r from-red-500 to-pink-400' }
   ];
 
@@ -166,13 +166,13 @@ const BuyerDashboard: React.FC = () => {
               <Search className="w-10 h-10 mx-auto text-green-500 mb-2" />
               <span className="text-base font-semibold text-gray-700">Tìm nhà cung cấp</span>
             </Link>
-            <Link
+            {/* <Link
               to="/buyer/chat"
               className="p-6 border-2 border-dashed border-purple-300 rounded-xl hover:border-purple-500 hover:bg-purple-50 text-center transition-colors shadow-sm"
             >
               <MessageCircle className="w-10 h-10 mx-auto text-purple-500 mb-2" />
               <span className="text-base font-semibold text-gray-700">Tin nhắn</span>
-            </Link>
+            </Link> */}
             <Link
               to="/buyer/order-detail"
               className="p-6 border-2 border-dashed border-yellow-300 rounded-xl hover:border-yellow-500 hover:bg-yellow-50 text-center transition-colors shadow-sm"

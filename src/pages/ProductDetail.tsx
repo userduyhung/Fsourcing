@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import showAppToast from '../utils/toast';
 import { productsApi } from '../services/apiClient';
 import { addCartItem } from '../services/cartService';
+import { validateProduct, validateAuthentication } from '../utils/purchaseValidation';
 
 // Define CartItem type locally since it's not exported from App
 interface CartItem {
@@ -78,28 +79,31 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ addToCart }) => {
   }
 
   const handleAddToCart = async () => {
-    // Check authentication tokens
-    const buyerToken = localStorage.getItem('buyerToken');
-    const sellerToken = localStorage.getItem('sellerToken');
-    const adminToken = localStorage.getItem('adminToken');
-    const supplierToken = localStorage.getItem('supplierToken');
-    const genericToken = localStorage.getItem('token');
-    const isAuthenticated = !!(buyerToken || sellerToken || adminToken || supplierToken || genericToken);
-    if (!isAuthenticated) {
-      // show toast then redirect, preserving the full current location (pathname + state)
-      showAppToast('Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng', 'info', 1400);
+    // Validate authentication
+    const authValidation = validateAuthentication();
+    if (!authValidation.isValid) {
+      showAppToast(authValidation.errors[0] || 'Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng', 'info', 1400);
       const from = { pathname: location.pathname, state: (location as any).state };
       setTimeout(() => navigate('/login', { state: { from } }), 600);
       return;
     }
 
+    // Validate product before adding to cart
+    const validation = validateProduct(product, quantity);
+    
+    // Show warnings if any
+    if (validation.warnings.length > 0) {
+      console.warn('Product warnings:', validation.warnings);
+    }
+    
+    // Show errors and stop if validation fails
+    if (!validation.isValid) {
+      showAppToast(validation.errors[0] || 'Sản phẩm không hợp lệ', 'error', 2500);
+      console.error('Product validation failed:', validation.errors);
+      return;
+    }
+
     try {
-      // Validate product has a valid id (GUID required by backend)
-      if (!product.id) {
-        console.error('Product missing id:', product);
-        showAppToast('Sản phẩm thiếu ID hợp lệ. Không thể thêm vào giỏ hàng.', 'error', 2000);
-        return;
-      }
 
       // Call backend API to add item to cart
       const productId = String(product.id);
@@ -112,12 +116,12 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ addToCart }) => {
       });
 
       // Also update local state for backward compatibility
-      addToCart({
-        id: productId,
-        name: product.name ?? 'Sản phẩm',
-        price: priceNumber,
-        image: mainImage ?? product.image
-      });
+      // addToCart({
+      //   id: productId,
+      //   name: product.name ?? 'Sản phẩm',
+      //   price: priceNumber,
+      //   image: mainImage ?? product.image
+      // });
 
       setShowAdded(true);
       showAppToast(`Đã thêm ${quantity} sản phẩm vào giỏ hàng`, 'success', 1200);
@@ -281,7 +285,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ addToCart }) => {
                         setQuantity(1);
                       }
                     }}
-                    className="w-20 h-10 text-center border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    className="w-20 h-10 text-center border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <button
                     onClick={() => setQuantity(quantity + 1)}
@@ -332,12 +336,12 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ addToCart }) => {
                       });
 
                       // Also update local state
-                      addToCart({ 
-                        id: productId, 
-                        name: product.name ?? 'Sản phẩm', 
-                        price: priceNumber, 
-                        image: mainImage ?? product.image 
-                      });
+                      // addToCart({ 
+                      //   id: productId, 
+                      //   name: product.name ?? 'Sản phẩm', 
+                      //   price: priceNumber, 
+                      //   image: mainImage ?? product.image 
+                      // });
 
                       navigate('/buyer/checkout');
                     } catch (error) {

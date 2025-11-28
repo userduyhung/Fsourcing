@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock } from 'lucide-react';
+import { authApi } from '../../services/apiClient';
 
 const SellerLogin: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -9,7 +10,7 @@ const SellerLogin: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     if (!email.trim() || !password) {
@@ -17,18 +18,32 @@ const SellerLogin: React.FC = () => {
       return;
     }
     setIsLoading(true);
-    setTimeout(() => {
-      if (email === 'seller@demo.com' && password === 'demo123') {
-        localStorage.setItem('sellerToken', 'mock-seller-token');
-        localStorage.setItem('userName', 'Demo Seller');
-        localStorage.setItem('userRole', 'seller');
+    try {
+      const response = await authApi.login({ email: email.trim(), password });
+      console.log('Login response:', response);
+      
+      // Extract token from response
+      const token = response?.token || response?.data?.token || response?.accessToken;
+      const userName = response?.userName || response?.data?.userName || response?.name || email;
+      const role = response?.role || response?.data?.role || 'seller';
+      
+      if (token) {
+        localStorage.setItem('sellerToken', token);
+        localStorage.setItem('userName', userName);
+        localStorage.setItem('userRole', role);
         window.dispatchEvent(new Event('userLoggedIn'));
         navigate('/seller/dashboard');
       } else {
-        setError('Email hoặc mật khẩu không đúng.');
+        setError('Đăng nhập thành công nhưng không nhận được token.');
+        console.error('No token in response:', response);
       }
+    } catch (err: any) {
+      console.error('Login error:', err);
+      const errorMsg = err?.response?.data?.message || err?.response?.data?.error || err?.message || 'Đăng nhập thất bại.';
+      setError(errorMsg);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (

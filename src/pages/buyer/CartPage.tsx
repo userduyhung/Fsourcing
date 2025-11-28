@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { CartItem } from '../../types';
 import { updateCartItem, deleteCartItem, getCart } from '../../services/cartService';
 import { sanitizeCartItems } from '../../utils/cartValidation';
+import { validateCart, validateQuantityUpdate } from '../../utils/purchaseValidation';
+import showAppToast from '../../utils/toast';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
@@ -41,13 +43,25 @@ const CartPage: React.FC = () => {
   };
 
   const updateQuantity = async (id: string, quantity: number) => {
-    if (quantity < 1) return;
+    // Validate quantity before update
+    const validation = validateQuantityUpdate(quantity);
+    if (!validation.isValid) {
+      showAppToast(validation.errors[0] || 'Số lượng không hợp lệ', 'error', 2000);
+      return;
+    }
+    
+    // Show warnings if any
+    if (validation.warnings.length > 0) {
+      showAppToast(validation.warnings[0], 'warning', 2500);
+    }
+    
     setUpdatingIds((s) => (s.includes(id) ? s : [...s, id]));
     try {
       await updateCartItem(id, quantity);
       await refreshFromStorage();
     } catch (err) {
       console.error('Failed to update cart item:', err);
+      showAppToast('Không thể cập nhật số lượng', 'error', 2000);
     } finally {
       setUpdatingIds((prev) => prev.filter((x) => x !== id));
     }
@@ -67,14 +81,45 @@ const CartPage: React.FC = () => {
 
   const total = cartState.reduce((sum, it) => sum + (Number(it.price) || 0) * (it.quantity || 0), 0);
 
+  // Validate cart before allowing checkout
+  const handleCheckout = () => {
+    const validation = validateCart(cartState);
+    
+    if (!validation.isValid) {
+      showAppToast(validation.errors[0] || 'Giỏ hàng có lỗi', 'error', 2500);
+      console.error('Cart validation errors:', validation.errors);
+      return;
+    }
+    
+    // Show warnings but allow to continue
+    if (validation.warnings.length > 0) {
+      showAppToast(validation.warnings[0], 'warning', 2000);
+    }
+    
+    navigate('/buyer/checkout');
+  };
+
   return (
     <div className="max-w-5xl mx-auto py-6 px-4">
       <h1 className="text-2xl font-semibold mb-4">Giỏ hàng</h1>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 bg-white p-4 rounded shadow-sm">
-          {cartState.length === 0 ? (
-            <div className="text-center py-12 text-gray-600">Giỏ hàng trống</div>
-          ) : (
+      {cartState.length === 0 ? (
+        <div className="bg-white rounded shadow-sm p-10 text-center">
+          <div className="max-w-2xl mx-auto">
+            <div className="text-3xl font-semibold mb-4">Giỏ hàng trống</div>
+            <p className="text-gray-600 mb-6">Bạn chưa thêm sản phẩm nào vào giỏ. Hãy khám phá sản phẩm phù hợp cho doanh nghiệp của bạn.</p>
+            <div className="flex justify-center">
+              <button
+                className="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700 transition-colors"
+                onClick={() => navigate('/products')}
+              >
+                Tiếp tục mua sắm
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2 bg-white p-4 rounded shadow-sm">
             <ul className="space-y-4">
               {cartState.map((item) => {
                 const isUpdating = updatingIds.includes(item.id);
@@ -132,21 +177,20 @@ const CartPage: React.FC = () => {
                 );
               })}
             </ul>
-          )}
-        </div>
+          </div>
 
-        <aside className="bg-white p-4 rounded shadow-sm">
-          <div className="text-lg font-medium">Tổng</div>
-          <div className="text-2xl font-bold my-3">{formatCurrency(total)}</div>
-          <button
-            className="w-full bg-blue-600 text-white py-2 rounded disabled:opacity-50"
-            onClick={() => navigate('/buyer/checkout')}
-            disabled={cartState.length === 0}
-          >
-            Xác nhận đặt hàng
-          </button>
-        </aside>
-      </div>
+          <aside className="bg-white p-4 rounded shadow-sm">
+            <div className="text-lg font-medium">Tổng</div>
+            <div className="text-2xl font-bold my-3">{formatCurrency(total)}</div>
+            <button
+              className="w-full bg-blue-600 text-white py-2 rounded disabled:opacity-50 hover:bg-blue-700 transition-colors"
+              onClick={handleCheckout}
+            >
+              Xác nhận đặt hàng
+            </button>
+          </aside>
+        </div>
+      )}
     </div>
   );
 };

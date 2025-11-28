@@ -136,10 +136,12 @@ const Login: React.FC = () => {
           window.dispatchEvent(new Event('userLoggedIn'));
           setTimeout(() => navigateAfterLogin(fromLocation), 1000);
         } else if (role === 'seller') {
-          console.log('Redirecting to home for seller...');
+          console.log('Redirecting to seller dashboard...');
           const sellerProfile = {
             id: response.user.id,
             companyName: response.user.company || response.user.fullName,
+            contactName: response.user.fullName,
+            fullName: response.user.fullName,
             email: response.user.email,
             phone: response.user.phone,
             country: response.user.country,
@@ -149,7 +151,8 @@ const Login: React.FC = () => {
           localStorage.setItem('sellerToken', token);
           localStorage.setItem('sellerProfile', JSON.stringify(sellerProfile));
           window.dispatchEvent(new Event('userLoggedIn'));
-          setTimeout(() => navigateAfterLogin(fromLocation), 1000);
+          // Redirect sellers directly to their dashboard
+          setTimeout(() => navigate('/seller/dashboard'), 600);
         } else {
           console.error('Unknown role:', role);
           showError('Unknown user role.');

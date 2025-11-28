@@ -253,13 +253,13 @@ const SellerDetail: React.FC = () => {
           <Send className="w-4 h-4 mr-2" />
           Tạo RFQ cho Seller này
         </button>
-        <button
+        {/* <button
           className="bg-purple-600 text-white px-6 py-2 rounded-lg flex items-center hover:bg-purple-700"
           onClick={() => navigate('/buyer/chat')}
         >
           <MessageCircle className="w-4 h-4 mr-2" />
           Chat với Seller
-        </button>
+        </button> */}
         <button
           className="bg-green-600 text-white px-6 py-2 rounded-lg flex items-center hover:bg-green-700"
           onClick={() => setShowReviewModal(true)}

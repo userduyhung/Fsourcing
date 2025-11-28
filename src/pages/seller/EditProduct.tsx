@@ -26,8 +26,27 @@ const EditProduct: React.FC<{ productId: string }> = ({ productId }) => {
     setErrorMsg(null);
     const fetchProduct = async () => {
       try {
+        /* API TEMPORARILY DISABLED - USING LOCAL STORAGE ONLY
         const resp = await apiClient.productsApi.get(String(productId));
         const data = resp?.data ?? resp;
+        if (isMounted) {
+          if (data) {
+            setProduct(data as Product);
+            setName(data.name || '');
+            setPrice((data.price ?? data.ReferencePrice ?? 0).toString());
+            setDescription(data.description || '');
+            setImage(data.image || data.imagePath || '');
+          } else {
+            setProduct(null);
+          }
+        }
+        */
+        
+        // Local storage fallback
+        const localProducts = localStorage.getItem('sellerProducts');
+        const items = localProducts ? JSON.parse(localProducts) : [];
+        const data = items.find((p: any) => String(p.id) === String(productId));
+        
         if (isMounted) {
           if (data) {
             setProduct(data as Product);
@@ -61,7 +80,21 @@ const EditProduct: React.FC<{ productId: string }> = ({ productId }) => {
         referencePrice: Number(price),
         imagePath: image,
       };
+      /* API TEMPORARILY DISABLED - USING LOCAL STORAGE ONLY
       await apiClient.request('put', `/products/${productId}`, payload);
+      */
+      
+      // Local storage fallback
+      const localProducts = localStorage.getItem('sellerProducts');
+      if (localProducts) {
+        const items = JSON.parse(localProducts);
+        const index = items.findIndex((p: any) => String(p.id) === String(productId));
+        if (index !== -1) {
+          items[index] = { ...items[index], ...payload, price: Number(price), image: image };
+          localStorage.setItem('sellerProducts', JSON.stringify(items));
+        }
+      }
+
       alert('Cập nhật sản phẩm thành công!');
       // Refresh list
       window.dispatchEvent(new Event('sellerProductsUpdated'));

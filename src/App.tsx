@@ -5,6 +5,7 @@ import Logo from './components/Logo';
 import SearchBar from './components/SearchBar';
 import ProductShowcase from './components/ProductShowcase';
 import UserMenu from './components/UserMenu';
+import RoleGuard from './components/RoleGuard';
 import BuyerProtectedRoute from './components/BuyerProtectedRoute';
 import ScrollToTop from './components/ScrollToTop';
 import { ProductList } from './pages/ProductList';
@@ -91,6 +92,7 @@ function App() {
       const sellerToken = localStorage.getItem('sellerToken');
       const userName = localStorage.getItem('userName');
       const userRole = localStorage.getItem('userRole');
+      
       // Nếu là buyer mà chưa có userName, lấy từ buyerProfile
       if (buyerToken && (!userName || !userRole)) {
         const buyerProfile = localStorage.getItem('buyerProfile');
@@ -106,7 +108,28 @@ function App() {
             // Fall through to normal validation
           }
         }
-      }      if ((adminToken || buyerToken || sellerToken) && userName && userRole) {
+      }
+      
+      // Nếu là seller mà chưa có userName, lấy từ sellerProfile
+      if (sellerToken && (!userName || !userRole)) {
+        const sellerProfile = localStorage.getItem('sellerProfile');
+        if (sellerProfile) {
+          try {
+            const profile = JSON.parse(sellerProfile);
+            // Seller profile có thể có companyName hoặc contactName hoặc fullName
+            if (profile && (profile.companyName || profile.contactName || profile.fullName || profile.name)) {
+              const displayName = profile.companyName || profile.contactName || profile.fullName || profile.name || 'Seller';
+              setUser({ name: displayName, role: 'seller' });
+              return;
+            }
+          } catch (error) {
+            console.error('Failed to parse sellerProfile:', error);
+            // Fall through to normal validation
+          }
+        }
+      }
+      
+      if ((adminToken || buyerToken || sellerToken) && userName && userRole) {
         setUser({ name: userName, role: userRole });
       } else {
         setUser(null);
@@ -177,22 +200,28 @@ function App() {
                 </Link>
               </div>
               <nav className="hidden md:flex space-x-8 font-sans">
-                {/* Supplier link removed temporarily */}
-                <Link to="/products" className="text-gray-600 hover:text-blue-600 transition-colors">Sản phẩm</Link>
-                <Link to="/services" className="text-gray-600 hover:text-blue-600 transition-colors">Dịch vụ</Link>
-                <Link to="/about" className="text-gray-600 hover:text-blue-600 transition-colors">Giới thiệu</Link>
+                {/* If logged-in user is a seller, show only seller dashboard link; hide buyer-facing product listing */}
+                {user && user.role === 'seller' ? (
+                  <Link to="/seller/dashboard" className="text-gray-600 hover:text-blue-600 transition-colors">Dashboard nhà cung cấp</Link>
+                ) : (
+                  <>
+                    <Link to="/products" className="text-gray-600 hover:text-blue-600 transition-colors">Sản phẩm</Link>
+                    <Link to="/services" className="text-gray-600 hover:text-blue-600 transition-colors">Dịch vụ</Link>
+                    <Link to="/about" className="text-gray-600 hover:text-blue-600 transition-colors">Giới thiệu</Link>
+                  </>
+                )}
               </nav>
               <div className="flex items-center space-x-4">
                 {user && user.role ? (
                   <>
                     {user.role === 'buyer' && (
                       <>
-                        <Link to="/buyer/chat" className="relative text-gray-600 hover:text-blue-600 transition-colors" title="Tin nhắn">
+                        {/* <Link to="/buyer/chat" className="relative text-gray-600 hover:text-blue-600 transition-colors" title="Tin nhắn">
                           <MessageCircle className="h-6 w-6" />
                           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
                             3
                           </span>
-                        </Link>
+                        </Link> */}
                         <Link to="/cart" className="relative">
                           <ShoppingCart className="h-6 w-6 text-blue-600" />
                           {cart.length > 0 && (
@@ -221,7 +250,7 @@ function App() {
         <Routes>
           <Route path="/" element={
             <>
-              <ChatWidget />
+              {/* <ChatWidget /> */}
               {/* Hero Section */}
               <section className="bg-gradient-to-br from-blue-50 to-indigo-100 pt-16 pb-20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -274,13 +303,13 @@ function App() {
                           <h3 className="text-xl font-semibold text-gray-900 mb-2 font-sans">Đối tác đã xác thực</h3>
                           <p className="text-gray-600 font-sans">Tất cả đối tác đều được kiểm duyệt nghiêm ngặt để đảm bảo uy tín và chất lượng.</p>
                         </div>
-                        <div className="text-center group">
+                        {/* <div className="text-center group">
                           <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-purple-200 transition-colors">
                             <MessageCircle className="h-8 w-8 text-purple-600" />
                           </div>
                           <h3 className="text-xl font-semibold text-gray-900 mb-2 font-sans">Chat trực tiếp</h3>
                           <p className="text-gray-600 font-sans">Liên hệ và trao đổi trực tiếp với nhà cung cấp qua hệ thống chat tích hợp.</p>
-                        </div>
+                        </div> */}
                         <div className="text-center group">
                           <div className="bg-teal-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-teal-200 transition-colors">
                             <Search className="h-8 w-8 text-teal-600" />
@@ -313,7 +342,11 @@ function App() {
               )}
             </>
           } />
-          <Route path="/products" element={<ProductList addToCart={addToCart} />} />
+          <Route path="/products" element={
+            <RoleGuard blockedRoles={['seller']} redirectTo={'/seller/dashboard'}>
+              <ProductList addToCart={addToCart} />
+            </RoleGuard>
+          } />
           <Route path="/product/:id" element={<ProductDetail addToCart={addToCart} />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/buyer/login" element={<LoginPage />} />
@@ -356,11 +389,11 @@ function App() {
               <BuyerProfile />
             </BuyerProtectedRoute>
           } />
-          <Route path="/buyer/chat" element={
+          {/* <Route path="/buyer/chat" element={
             <BuyerProtectedRoute>
               <ChatPage />
             </BuyerProtectedRoute>
-          } />
+          } /> */}
           <Route path="/buyer/rfq-list" element={
             <BuyerProtectedRoute>
               <OrderList />
