@@ -12,8 +12,10 @@ const ProductShowcase: React.FC<{ addToCart?: (product: any) => void }> = ({ add
 
   // Flatten products from categories
   const allProducts = CATEGORIES.flatMap(c => c.products || []);
-  // Limit the homepage showcase to at most MAX_SHOW products
-  const displayProducts = allProducts.slice(0, Math.min(MAX_SHOW, allProducts.length));
+  
+  // Shuffle array using Fisher-Yates algorithm and pick MAX_SHOW products
+  const shuffled = [...allProducts].sort(() => Math.random() - 0.5);
+  const displayProducts = shuffled.slice(0, Math.min(MAX_SHOW, shuffled.length));
 
   return (
     <section className="bg-gray-50 rounded-xl p-4 mt-8 flex justify-center font-sans">

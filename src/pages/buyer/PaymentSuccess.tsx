@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { CheckCircle, Package, Clock, MapPin, Mail } from 'lucide-react';
 import emailService from '../../services/emailService';
@@ -12,24 +12,40 @@ interface PaymentSuccessProps {
 
 const PaymentSuccess: React.FC<PaymentSuccessProps> = ({ orderId, amount, transactionId }) => {
   const location = useLocation();
-  const { reference, total } = location.state || {};
+  const { reference, total, cartItems = [] } = location.state || {};
   const [showConfetti, setShowConfetti] = useState(true);
   const [emailSent, setEmailSent] = useState(false);
+  const emailSentRef = useRef(false); // Flag để tránh gửi 2 lần
 
-  // Generate mock order ID for demo
-  const demoOrderId = orderId || `FS${Date.now().toString().slice(-8)}`;
-  const demoAmount = amount || total || 0;
-  const estimatedDelivery = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString('vi-VN');
-  const orderDate = new Date().toLocaleDateString('vi-VN');
+  // Generate stable values - ONLY ONCE using useMemo or useState
+  const [orderInfo] = useState(() => {
+    return {
+      demoOrderId: orderId || `FS${Date.now().toString().slice(-8)}`,
+      demoAmount: amount || total || 0,
+      estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString('vi-VN'),
+      orderDate: new Date().toLocaleDateString('vi-VN')
+    };
+  });
+
+  const { demoOrderId, demoAmount, estimatedDelivery, orderDate } = orderInfo;
 
   // Confetti effect
   useEffect(() => {
     setTimeout(() => setShowConfetti(false), 3000);
   }, []);
 
-  // Send confirmation email
+  // Send confirmation email - CHỈ CHẠY 1 LẦN DUY NHẤT
   useEffect(() => {
     const sendEmailConfirmation = async () => {
+      // Kiểm tra đã gửi chưa bằng useRef (persistent across renders)
+      if (emailSentRef.current) {
+        console.log('⏭️ Email already sent, skipping...');
+        return;
+      }
+
+      // Đánh dấu đã gửi NGAY LẬP TỨC để tránh race condition
+      emailSentRef.current = true;
+
       try {
         // Lấy thông tin buyer từ localStorage
         const buyerProfileStr = localStorage.getItem('buyerProfile');
@@ -46,17 +62,19 @@ const PaymentSuccess: React.FC<PaymentSuccessProps> = ({ orderId, amount, transa
           return;
         }
 
-        // Lấy thông tin cart items (nếu có)
-        const cartStr = localStorage.getItem('cart');
-        const cartItems = cartStr ? JSON.parse(cartStr) : [];
+        // SỬ DỤNG CART ITEMS TỪ LOCATION.STATE (đã được truyền từ CheckoutPage)
+        console.log('📦 Cart items from checkout:', cartItems);
 
-        // Format cart items cho email
+        // Format cart items cho email (bao gồm cả hình ảnh)
         const orderItems = cartItems.map((item: any) => ({
           productName: item.name || 'Sản phẩm',
           quantity: item.quantity || 1,
           price: item.price || 0,
-          subtotal: (item.price || 0) * (item.quantity || 1)
+          subtotal: (item.price || 0) * (item.quantity || 1),
+          imageUrl: item.image || 'https://via.placeholder.com/150?text=No+Image'  // Ảnh sản phẩm
         }));
+
+        console.log('📧 Sending email for order:', demoOrderId, 'with', orderItems.length, 'items');
 
         // Gửi email xác nhận
         const result = await emailService.sendOrderConfirmation({
@@ -87,7 +105,9 @@ const PaymentSuccess: React.FC<PaymentSuccessProps> = ({ orderId, amount, transa
     };
 
     sendEmailConfirmation();
-  }, [demoOrderId, demoAmount, estimatedDelivery, orderDate]);
+    
+    // KHÔNG CÓ DEPENDENCIES → CHỈ CHẠY 1 LẦN KHI COMPONENT MOUNT
+  }, []);
 
   const currency = (v: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
 

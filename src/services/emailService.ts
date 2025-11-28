@@ -19,6 +19,7 @@ export interface OrderItem {
   quantity: number;
   price: number;
   subtotal: number;
+  imageUrl?: string;  // URL hình ảnh sản phẩm
 }
 
 export interface EmailOrderData {
@@ -66,7 +67,7 @@ class EmailService {
       }
 
       // Format dữ liệu cho template
-      const templateParams = {
+      const templateParams: any = {
         // Thông tin đơn hàng
         order_id: orderData.orderId,
         order_date: orderData.orderDate,
@@ -83,9 +84,11 @@ class EmailService {
         // Địa chỉ giao hàng
         shipping_address: orderData.shippingAddress || 'Đang cập nhật',
         
-        // Danh sách sản phẩm (format thành HTML table)
-        items_list: this.formatItemsList(orderData.items || []),
+        // Số lượng sản phẩm
         items_count: orderData.items?.length || 0,
+        
+        // Danh sách sản phẩm HTML (HỖ TRỢ KHÔNG GIỚI HẠN số lượng)
+        items_list: this.formatItemsList(orderData.items || []),
         
         // Thông tin hệ thống
         company_name: 'Fsourcing',
@@ -141,43 +144,40 @@ class EmailService {
   }
 
   /**
-   * Format danh sách sản phẩm thành HTML table
+   * Format danh sách sản phẩm thành HTML cards với hình ảnh (hỗ trợ KHÔNG GIỚI HẠN số lượng)
    */
   private formatItemsList(items: OrderItem[]): string {
     if (!items || items.length === 0) {
-      return '<p>Không có sản phẩm trong đơn hàng</p>';
+      return '<p style="color: #666; text-align: center; padding: 20px;">Không có sản phẩm trong đơn hàng</p>';
     }
 
-    let html = `
-      <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-        <thead>
-          <tr style="background-color: #f3f4f6; border-bottom: 2px solid #e5e7eb;">
-            <th style="padding: 12px; text-align: left; font-weight: 600;">Sản phẩm</th>
-            <th style="padding: 12px; text-align: center; font-weight: 600;">SL</th>
-            <th style="padding: 12px; text-align: right; font-weight: 600;">Đơn giá</th>
-            <th style="padding: 12px; text-align: right; font-weight: 600;">Thành tiền</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
-
+    let html = '<div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px;">';
+    
     items.forEach((item, index) => {
-      const bgColor = index % 2 === 0 ? '#ffffff' : '#f9fafb';
+      const imageUrl = item.imageUrl || 'https://via.placeholder.com/150?text=No+Image';
+      
       html += `
-        <tr style="background-color: ${bgColor}; border-bottom: 1px solid #e5e7eb;">
-          <td style="padding: 12px;">${item.productName}</td>
-          <td style="padding: 12px; text-align: center;">${item.quantity}</td>
-          <td style="padding: 12px; text-align: right;">${this.formatCurrency(item.price)}</td>
-          <td style="padding: 12px; text-align: right; font-weight: 600;">${this.formatCurrency(item.subtotal)}</td>
-        </tr>
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: #ffffff; margin-bottom: 10px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          <tr>
+            <td width="100" style="padding: 10px; vertical-align: middle; text-align: center; background-color: #f9fafb;">
+              <img src="${imageUrl}" alt="${item.productName}" width="80" height="80" style="object-fit: cover; border-radius: 6px; display: block; border: 1px solid #e5e7eb; margin: 0 auto;">
+            </td>
+            <td style="padding: 10px; vertical-align: top;">
+              <div style="font-size: 16px; font-weight: bold; color: #111827; margin-bottom: 4px;">
+                ${index + 1}. ${item.productName}
+              </div>
+              <div style="font-size: 14px; color: #4b5563; line-height: 1.5;">
+                Số lượng: <strong style="color: #000;">${item.quantity}</strong><br>
+                Đơn giá: ${this.formatCurrency(item.price)}<br>
+                Thành tiền: <strong style="color: #2563eb;">${this.formatCurrency(item.subtotal)}</strong>
+              </div>
+            </td>
+          </tr>
+        </table>
       `;
     });
-
-    html += `
-        </tbody>
-      </table>
-    `;
-
+    
+    html += '</div>';
     return html;
   }
 }

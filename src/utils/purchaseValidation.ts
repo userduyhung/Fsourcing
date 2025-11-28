@@ -324,7 +324,8 @@ export function validatePayment(
   // Validate amount
   if (!totalAmount || totalAmount <= 0) {
     errors.push('Tổng số tiền thanh toán không hợp lệ');
-  } else if (totalAmount !== cartValidation.totalAmount) {
+  } else if (totalAmount < cartValidation.totalAmount) {
+    // Total must be at least the cart subtotal (can be higher with shipping fee)
     errors.push('Tổng số tiền không khớp với giỏ hàng');
   }
 

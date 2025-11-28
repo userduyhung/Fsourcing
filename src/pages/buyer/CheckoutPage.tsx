@@ -6,6 +6,7 @@ import { getCart, clearCart } from '../../services/cartService';
 import { sanitizeCartItems } from '../../utils/cartValidation';
 import { validateAddress, validatePayment, validateVietQRConfig, validateCart } from '../../utils/purchaseValidation';
 import showAppToast from '../../utils/toast';
+import { calculateShippingFee } from '../../utils/shippingFee';
 
 const currency = (v: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
 
@@ -24,6 +25,10 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart, paymentQRCodeU
   const [selectedDistrict, setSelectedDistrict] = useState('');
   const [selectedWard, setSelectedWard] = useState('');
   const [street, setStreet] = useState('');
+  
+  // Shipping fee states
+  const [shippingFee, setShippingFee] = useState(0);
+  const [shippingMessage, setShippingMessage] = useState('');
 
   useEffect(() => {
     fetch('https://provinces.open-api.vn/api/?depth=1')
@@ -71,6 +76,21 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart, paymentQRCodeU
     }
   }, [selectedProvince, selectedDistrict, selectedWard, street, provinces, districts, wards]);
 
+  // Tính phí giao hàng khi chọn tỉnh/thành
+  useEffect(() => {
+    if (selectedProvince) {
+      const provinceName = provinces.find(x => x.code == selectedProvince)?.name;
+      if (provinceName) {
+        const result = calculateShippingFee(provinceName);
+        setShippingFee(result.fee);
+        setShippingMessage(result.message);
+      }
+    } else {
+      setShippingFee(0);
+      setShippingMessage('');
+    }
+  }, [selectedProvince, provinces]);
+
   const [showPayment, setShowPayment] = useState(false);
   const [paymentRef, setPaymentRef] = useState<string | null>(null);
   const [externalQRCodeUrl, setExternalQRCodeUrl] = useState<string | null>(null);
@@ -105,13 +125,14 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart, paymentQRCodeU
     return () => { mounted = false; };
   }, []);
 
-  const total = cart.reduce((sum, item) => sum + (Number(item.price) || 0) * (item.quantity || 0), 0);
+  const subtotal = cart.reduce((sum, item) => sum + (Number(item.price) || 0) * (item.quantity || 0), 0);
+  const total = subtotal + shippingFee;
 
   // VietQR API Configuration (moved after total calculation)
   const VIETQR_CONFIG = {
-    accountNo: '100876738714',
-    accountName: 'NGUYEN DUY HUNG',
-    acqId: '970415',  // Mã ngân hàng Vietinbank
+    accountNo: '7033359999',
+    accountName: 'HUANG TAI PHONG',
+    acqId: '970407',  // Mã ngân hàng Techcombank
     amount: total,
     addInfo: `FSOURCING ${Date.now().toString().slice(-6)}`,  // Nội dung chuyển khoản
     format: 'text',
@@ -221,6 +242,14 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart, paymentQRCodeU
   const handleSimulatePayment = () => {
     // Simple simulation: navigate to success page and clear local cart if desired
     try {
+      // LƯU LẠI CART ITEMS TRƯỚC KHI XÓA (bao gồm cả hình ảnh)
+      const cartItemsForEmail = cart.map(item => ({
+        name: item.name || 'Sản phẩm',
+        quantity: item.quantity || 1,
+        price: item.price || 0,
+        image: item.image || 'https://via.placeholder.com/150?text=No+Image'  // Ảnh sản phẩm
+      }));
+
       // Clear localCart so subsequent visits show an empty cart
       try {
         clearCart();
@@ -234,7 +263,15 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart, paymentQRCodeU
       } catch (e) {
         console.warn('onClearCart callback failed', e);
       }
-      navigate('/buyer/payment-success', { state: { reference: paymentRef || externalQRCodeUrl || paymentQRCodeUrl, total } });
+      // TRUYỀN CART ITEMS QUA STATE
+      navigate('/buyer/payment-success', { 
+        state: { 
+          reference: paymentRef || externalQRCodeUrl || paymentQRCodeUrl, 
+          total,
+          cartItems: cartItemsForEmail,
+          shippingFee: shippingFee  // ← Thêm phí ship
+        } 
+      });
     } catch (e) {
       console.error('Navigation failed', e);
     }
@@ -297,9 +334,21 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart, paymentQRCodeU
                 ))}
               </ul>
               <div className="mt-4 border-t pt-4">
-                <div className="flex justify-between items-center text-lg font-bold">
-                  <span>Tổng cộng</span>
-                  <span className="text-blue-600">{currency(total)}</span>
+                <div className="flex justify-between items-center text-sm mb-2">
+                  <span className="text-gray-600">Tạm tính</span>
+                  <span className="text-gray-900">{currency(subtotal)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm mb-2">
+                  <span className="text-gray-600">Phí giao hàng</span>
+                  <span className={shippingFee === 0 ? 'text-green-600 font-medium' : 'text-gray-900'}>
+                    {shippingFee === 0 ? 'Miễn phí 🎉' : currency(shippingFee)}
+                  </span>
+                </div>
+                <div className="border-t pt-2 mt-2">
+                  <div className="flex justify-between items-center text-lg font-bold">
+                    <span>Tổng cộng</span>
+                    <span className="text-blue-600">{currency(total)}</span>
+                  </div>
                 </div>
                 <div className="text-sm text-gray-500 mt-2">Địa chỉ giao hàng: <span className="font-medium">{address || 'Chưa có'}</span></div>
               </div>
@@ -424,16 +473,32 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart, paymentQRCodeU
                   />
                 </div>
                 {address && <div className="mt-2 text-sm text-gray-500 italic">Địa chỉ đầy đủ: {address}</div>}
+                {shippingMessage && (
+                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+                    <span className="font-medium text-blue-700">{shippingMessage}</span>
+                  </div>
+                )}
               </div>
             </div>
 
             <aside className="md:col-span-1 bg-gray-50 p-4 rounded">
               <div className="mb-4">
-                <div className="flex justify-between items-center text-lg font-bold">
-                  <span>Tổng cộng</span>
-                  <span className="text-blue-600">{currency(total)}</span>
+                <div className="flex justify-between items-center text-sm mb-2">
+                  <span className="text-gray-600">Tạm tính</span>
+                  <span className="text-gray-900">{currency(subtotal)}</span>
                 </div>
-                <div className="text-sm text-gray-500 mt-2">Phí vận chuyển được tính khi xác nhận đơn.</div>
+                <div className="flex justify-between items-center text-sm mb-2">
+                  <span className="text-gray-600">Phí giao hàng</span>
+                  <span className={shippingFee === 0 ? 'text-green-600 font-medium' : 'text-gray-900'}>
+                    {shippingFee === 0 ? 'Miễn phí' : currency(shippingFee)}
+                  </span>
+                </div>
+                <div className="border-t pt-2 mt-2">
+                  <div className="flex justify-between items-center text-lg font-bold">
+                    <span>Tổng cộng</span>
+                    <span className="text-blue-600">{currency(total)}</span>
+                  </div>
+                </div>
               </div>
 
               <button
