@@ -105,33 +105,135 @@ export const ProductList: React.FC<{ addToCart?: (product: any) => void }> = ({ 
     : (filteredCategories.find(cat => cat.name === selectedCategory)?.products || []).map(p => ({ ...p, category: selectedCategory }));
 
   return (
-    <div className="bg-app min-h-screen py-8 font-sans">
+    <div className="bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 min-h-screen py-8 font-sans">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="mb-6">
-          <SearchBar />
+        {/* Hero Search Section */}
+        <div className="mb-8 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-2xl p-8 shadow-2xl">
+          <div className="max-w-3xl mx-auto">
+            <h1 className="text-3xl md:text-4xl font-bold text-white text-center mb-4">
+              🛒 Khám phá hàng nghìn sản phẩm chất lượng
+            </h1>
+            <p className="text-white/90 text-center mb-6">
+              Tìm kiếm và mua sắm dễ dàng với giá tốt nhất thị trường
+            </p>
+            <SearchBar />
+          </div>
         </div>
-        <ProductCategoryTabs onSelect={setSelectedCategory} selected={selectedCategory} />
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">
-          {selectedCategory === 'Tất cả' ? 'Tất cả sản phẩm' : selectedCategory}
-        </h1>
-        {selectedCategory === 'Tất cả' ? (
-          filteredCategories.map(category => (
-            <div key={category.name} className="mb-10">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">{category.name}</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                {category.products.map((product, idx) => (
-                  <ProductCard key={idx} {...product} onAddToCart={addToCart} />
-                ))}
-              </div>
+
+        {/* Category Tabs */}
+        <div className="mb-8">
+          <ProductCategoryTabs onSelect={setSelectedCategory} selected={selectedCategory} />
+        </div>
+
+        {/* Category Header */}
+        <div className="mb-6 flex items-center justify-between bg-white rounded-xl shadow-md p-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-full font-bold">
+              {selectedCategory === 'Tất cả' ? '🏪' : '📦'}
             </div>
-          ))
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            {productsForSelectedCategory.map((product, idx) => (
-              <ProductCard key={idx} {...product} onAddToCart={addToCart} />
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">
+                {selectedCategory === 'Tất cả' ? 'Tất cả sản phẩm' : selectedCategory}
+              </h2>
+              <p className="text-sm text-gray-500">
+                {selectedCategory === 'Tất cả' 
+                  ? `${allProducts.length} sản phẩm có sẵn` 
+                  : `${productsForSelectedCategory.length} sản phẩm`
+                }
+              </p>
+            </div>
+          </div>
+          <div className="hidden md:block text-sm text-gray-500">
+            💡 Nhấn vào sản phẩm để xem chi tiết
+          </div>
+        </div>
+
+        {/* Products Display */}
+        {selectedCategory === 'Tất cả' ? (
+          <div className="space-y-10">
+            {filteredCategories.map((category, categoryIdx) => (
+              <div key={category.name} className="animate-fade-in" style={{ animationDelay: `${categoryIdx * 0.1}s` }}>
+                {/* Category Title Card */}
+                <div className="bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl p-4 mb-4 shadow-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
+                        <span className="text-2xl">
+                          {categoryIdx === 0 ? '🍺' : categoryIdx === 1 ? '🍪' : categoryIdx === 2 ? '🍜' : categoryIdx === 3 ? '🧴' : '🥛'}
+                        </span>
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-white">{category.name}</h2>
+                        <p className="text-white/80 text-sm">{category.products.length} sản phẩm</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setSelectedCategory(category.name)}
+                      className="bg-white text-blue-600 px-4 py-2 rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all"
+                    >
+                      Xem tất cả →
+                    </button>
+                  </div>
+                </div>
+
+                {/* Products Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+                  {category.products.map((product, idx) => (
+                    <div 
+                      key={idx} 
+                      className="transform hover:scale-105 transition-all duration-300"
+                      style={{ animationDelay: `${idx * 0.05}s` }}
+                    >
+                      <ProductCard {...product} onAddToCart={addToCart} />
+                    </div>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
+        ) : (
+          <div className="bg-white rounded-2xl shadow-xl p-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+              {productsForSelectedCategory.map((product, idx) => (
+                <div 
+                  key={idx} 
+                  className="transform hover:scale-105 transition-all duration-300 animate-fade-in"
+                  style={{ animationDelay: `${idx * 0.05}s` }}
+                >
+                  <ProductCard {...product} onAddToCart={addToCart} />
+                </div>
+              ))}
+            </div>
+            
+            {/* Empty State */}
+            {productsForSelectedCategory.length === 0 && (
+              <div className="text-center py-16">
+                <div className="text-6xl mb-4">😕</div>
+                <h3 className="text-xl font-bold text-gray-700 mb-2">Không tìm thấy sản phẩm</h3>
+                <p className="text-gray-500 mb-4">Thử tìm kiếm với từ khóa khác</p>
+                <button 
+                  onClick={() => setSelectedCategory('Tất cả')}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-full font-bold hover:shadow-lg transform hover:scale-105 transition-all"
+                >
+                  Xem tất cả sản phẩm
+                </button>
+              </div>
+            )}
+          </div>
         )}
+
+        {/* Bottom CTA */}
+        <div className="mt-12 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 rounded-2xl p-8 text-center shadow-2xl">
+          <h3 className="text-2xl md:text-3xl font-bold text-white mb-3">
+            🎉 Chưa tìm được sản phẩm phù hợp?
+          </h3>
+          <p className="text-white/90 mb-6">
+            Liên hệ với chúng tôi để được tư vấn và báo giá sản phẩm theo nhu cầu
+          </p>
+          <button className="bg-white text-red-600 px-8 py-3 rounded-full font-bold text-lg hover:shadow-2xl transform hover:scale-105 transition-all">
+            📞 Liên hệ ngay
+          </button>
+        </div>
       </div>
     </div>
   );

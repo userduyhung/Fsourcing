@@ -69,26 +69,31 @@ const ProductCard: React.FC<ProductCardProps & { onAddToCart?: (product: any) =>
     }
   };
   return (
-    <div className="bg-white rounded-lg shadow-sm p-2 flex flex-col items-center cursor-pointer hover:shadow-lg relative font-sans" onClick={handleClick}>
+    <div className="bg-white rounded-lg shadow-sm p-3 flex flex-col cursor-pointer hover:shadow-lg relative font-sans h-full min-h-[320px]" onClick={handleClick}>
       <button
-        className="absolute top-2 right-2 bg-blue-100 hover:bg-blue-200 p-2 rounded-full z-10"
+        className="absolute top-2 right-2 bg-blue-100 hover:bg-blue-200 p-2 rounded-full z-10 transition-colors"
         onClick={handleAddToCart}
         title="Thêm vào giỏ hàng"
       >
         <ShoppingCart className="h-5 w-5 text-blue-600" />
       </button>
-      <img src={image} alt={name} className="w-full h-32 object-contain rounded-md mb-2" />
-      <div className="w-full">
-        <div className="font-bold text-base text-gray-900 mb-0.5 font-sans">
+      
+      {/* Image container with fixed height */}
+      <div className="w-full h-32 flex items-center justify-center mb-3">
+        <img src={image} alt={name} className="max-w-full max-h-full object-contain rounded-md" />
+      </div>
+      
+      {/* Content container with flex-grow */}
+      <div className="w-full flex-grow flex flex-col">
+        <div className="font-bold text-base text-gray-900 mb-1 font-sans">
           {typeof price === 'number' 
             ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price)
             : price}
         </div>
-        <div className="text-gray-400 text-xs mb-0.5 font-sans">Số lượng: {quantity}</div>
-        <div className="text-gray-700 text-sm font-medium font-sans">{name}</div>
-        <div className="text-gray-500 text-xs mt-0.5 font-sans">{description}</div>
+        <div className="text-gray-400 text-xs mb-2 font-sans">Số lượng: {quantity}</div>
+        <div className="text-gray-700 text-sm font-medium font-sans mb-1 line-clamp-2">{name}</div>
+        <div className="text-gray-500 text-xs mt-auto font-sans line-clamp-3">{description}</div>
       </div>
-
     </div>
   );
 }

@@ -324,10 +324,11 @@ export function validatePayment(
   // Validate amount
   if (!totalAmount || totalAmount <= 0) {
     errors.push('Tổng số tiền thanh toán không hợp lệ');
-  } else if (totalAmount < cartValidation.totalAmount) {
-    // Total must be at least the cart subtotal (can be higher with shipping fee)
-    errors.push('Tổng số tiền không khớp với giỏ hàng');
   }
+  
+  // NOTE: Không kiểm tra totalAmount < cartValidation.totalAmount
+  // vì có thể có giảm giá làm giảm tổng tiền
+  // Chỉ cần đảm bảo totalAmount > 0 và >= MIN_ORDER_VALUE
 
   // Check minimum order value (e.g., 10,000 VND)
   const MIN_ORDER_VALUE = 10000;

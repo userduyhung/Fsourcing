@@ -7,6 +7,7 @@ import { sanitizeCartItems } from '../../utils/cartValidation';
 import { validateAddress, validatePayment, validateVietQRConfig, validateCart } from '../../utils/purchaseValidation';
 import showAppToast from '../../utils/toast';
 import { calculateShippingFee } from '../../utils/shippingFee';
+import { calculateFirstOrderDiscount } from '../../utils/discountCalculator';
 
 const currency = (v: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
 
@@ -29,6 +30,9 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart, paymentQRCodeU
   // Shipping fee states
   const [shippingFee, setShippingFee] = useState(0);
   const [shippingMessage, setShippingMessage] = useState('');
+  
+  // Discount states
+  const [discountInfo, setDiscountInfo] = useState<any>(null);
 
   useEffect(() => {
     fetch('https://provinces.open-api.vn/api/?depth=1')
@@ -90,6 +94,15 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart, paymentQRCodeU
       setShippingMessage('');
     }
   }, [selectedProvince, provinces]);
+  
+  // Tính giảm giá cho đơn hàng
+  useEffect(() => {
+    if (cart.length > 0) {
+      const subtotal = cart.reduce((sum, item) => sum + (Number(item.price) || 0) * (item.quantity || 0), 0);
+      const discount = calculateFirstOrderDiscount(subtotal);
+      setDiscountInfo(discount);
+    }
+  }, [cart]);
 
   const [showPayment, setShowPayment] = useState(false);
   const [paymentRef, setPaymentRef] = useState<string | null>(null);
@@ -126,7 +139,8 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart, paymentQRCodeU
   }, []);
 
   const subtotal = cart.reduce((sum, item) => sum + (Number(item.price) || 0) * (item.quantity || 0), 0);
-  const total = subtotal + shippingFee;
+  const subtotalAfterDiscount = discountInfo?.isApplicable ? discountInfo.finalAmount : subtotal;
+  const total = subtotalAfterDiscount + shippingFee;
 
   // VietQR API Configuration (moved after total calculation)
   const VIETQR_CONFIG = {
@@ -336,8 +350,20 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart, paymentQRCodeU
               <div className="mt-4 border-t pt-4">
                 <div className="flex justify-between items-center text-sm mb-2">
                   <span className="text-gray-600">Tạm tính</span>
-                  <span className="text-gray-900">{currency(subtotal)}</span>
+                  <span className={discountInfo?.isApplicable ? 'text-gray-400 line-through' : 'text-gray-900'}>{currency(subtotal)}</span>
                 </div>
+                {discountInfo?.isApplicable && (
+                  <>
+                    <div className="flex justify-between items-center text-sm mb-2">
+                      <span className="text-green-600 font-medium">🎉 Giảm giá {discountInfo.discountPercent}%</span>
+                      <span className="text-green-600 font-bold">-{currency(discountInfo.discountAmount)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm mb-2">
+                      <span className="text-gray-600">Sau giảm giá</span>
+                      <span className="text-blue-600 font-semibold">{currency(subtotalAfterDiscount)}</span>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between items-center text-sm mb-2">
                   <span className="text-gray-600">Phí giao hàng</span>
                   <span className={shippingFee === 0 ? 'text-green-600 font-medium' : 'text-gray-900'}>
@@ -482,7 +508,43 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart, paymentQRCodeU
             </div>
 
             <aside className="md:col-span-1 bg-gray-50 p-4 rounded">
+              {/* Hiển thị thông báo khuyến mãi */}
+              {discountInfo && (
+                <div className={`mb-4 p-3 rounded-lg border-2 ${
+                  discountInfo.isApplicable 
+                    ? 'bg-green-50 border-green-300' 
+                    : 'bg-yellow-50 border-yellow-300'
+                }`}>
+                  <div className="text-sm font-semibold ${
+                    discountInfo.isApplicable ? 'text-green-800' : 'text-yellow-800'
+                  }">
+                    {discountInfo.message}
+                  </div>
+                  {discountInfo.isApplicable && (
+                    <div className="text-xs text-green-600 mt-1">
+                      Tiết kiệm: {currency(discountInfo.discountAmount)}
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <div className="mb-4">
+                <div className="flex justify-between items-center text-sm mb-2">
+                  <span className="text-gray-600">Tạm tính</span>
+                  <span className={discountInfo?.isApplicable ? 'text-gray-400 line-through' : 'text-gray-900'}>{currency(subtotal)}</span>
+                </div>
+                {discountInfo?.isApplicable && (
+                  <>
+                    <div className="flex justify-between items-center text-sm mb-2">
+                      <span className="text-green-600 font-medium">🎉 Giảm {discountInfo.discountPercent}%</span>
+                      <span className="text-green-600 font-bold">-{currency(discountInfo.discountAmount)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm mb-2">
+                      <span className="text-gray-600">Sau giảm</span>
+                      <span className="text-blue-600 font-semibold">{currency(subtotalAfterDiscount)}</span>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between items-center text-sm mb-2">
                   <span className="text-gray-600">Tạm tính</span>
                   <span className="text-gray-900">{currency(subtotal)}</span>

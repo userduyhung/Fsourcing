@@ -251,13 +251,37 @@ function App() {
           <Route path="/" element={
             <>
               {/* <ChatWidget /> */}
-              {/* Hero Section */}
-              <section className="bg-gradient-to-br from-blue-50 to-indigo-100 pt-16 pb-20">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              {/* Hero Section - Cải thiện cho Buyer */}
+              <section className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 pt-16 pb-20 relative overflow-hidden">
+                <div className="absolute inset-0 opacity-5">
+                  <div className="absolute top-20 left-10 w-72 h-72 bg-blue-400 rounded-full filter blur-3xl animate-pulse"></div>
+                  <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-400 rounded-full filter blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+                </div>
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                  {/* Banner khuyến mãi động cho Buyer */}
+                  {user && user.role === 'buyer' && (
+                    <div className="mb-8 bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 rounded-2xl p-1 shadow-2xl animate-gradient">
+                      <div className="bg-white rounded-xl p-6 flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="bg-gradient-to-br from-red-500 to-orange-500 rounded-full p-3 animate-bounce">
+                            <Star className="h-8 w-8 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="text-2xl font-bold text-gray-900">🎉 Chào mừng {user.name}!</h3>
+                            <p className="text-gray-600 font-semibold">Giảm giá đến 30% cho đơn hàng đầu tiên trong tuần này!</p>
+                          </div>
+                        </div>
+                        <Link to="/products" className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-full font-bold hover:shadow-lg transform hover:scale-105 transition-all">
+                          Mua ngay
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="text-center">
-                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 font-sans">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 font-sans animate-fade-in">
                       <span className="inline-block">Khám phá sản phẩm chất lượng</span>
-                      <span className="text-blue-600 inline-block"> cho doanh nghiệp của bạn</span>
+                      <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent inline-block"> cho doanh nghiệp của bạn</span>
                     </h1>
                     <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto font-sans">
                       Tìm các sản phẩm đáng tin cậy, tối ưu hóa quy trình mua sắm với nền tảng B2B tiện lợi.
@@ -266,9 +290,11 @@ function App() {
                     <div className="mb-12">
                       <SearchBar />
                     </div>
-                    {/* Supplier CTAs removed temporarily */}
+                    
+                    {/* Hero Image với hiệu ứng */}
                     <div className="relative max-w-4xl mx-auto">
-                      <div className="bg-white rounded-xl shadow-2xl p-4">
+                      <div className="absolute -inset-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-2xl blur-2xl opacity-20 animate-pulse"></div>
+                      <div className="relative bg-white rounded-xl shadow-2xl p-4 transform hover:scale-[1.02] transition-transform duration-300">
                         <img
                           src="https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg"
                           alt="Global Trade Platform"
@@ -279,6 +305,58 @@ function App() {
                   </div>
                 </div>
               </section>
+              
+              {/* Flash Sale Section - CHỈ cho Buyer */}
+              {user && user.role === 'buyer' && (
+                <section className="bg-white py-12">
+                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 rounded-2xl p-8 shadow-2xl">
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center space-x-4">
+                          <div className="bg-white rounded-full p-3 animate-spin-slow">
+                            <TrendingUp className="h-8 w-8 text-red-500" />
+                          </div>
+                          <div>
+                            <h2 className="text-3xl font-bold text-white">⚡ FLASH SALE TRONG NGÀY</h2>
+                            <p className="text-white/90 font-medium">Ưu đãi kết thúc sau: <span className="font-bold text-yellow-300">23:59:59</span></p>
+                          </div>
+                        </div>
+                        <Link to="/products" className="bg-white text-red-600 px-8 py-3 rounded-full font-bold hover:shadow-lg transform hover:scale-105 transition-all">
+                          Xem tất cả →
+                        </Link>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {[
+                          { name: 'Bia Tiger', discount: '25%', oldPrice: 12000, newPrice: 9000, image: 'https://bizweb.dktcdn.net/100/446/647/products/bia-tiger-sleek-5-abv-lon-330ml-281124-112850-1732768166826.jpg?v=1732768294907' },
+                          { name: 'Bánh Choco-Pie', discount: '30%', oldPrice: 60000, newPrice: 42000, image: 'https://static.vinshop.vn/cdn-cgi/image/cdnCode=PRIMARY,fit=scale-down,w=820,h=820,quality=80,f=auto/media/sys_b2bpcm/images/h2e/h00/1523/a6fc501f-bd61-42d1-9e63-464dae5e0d54.png' },
+                          { name: 'Cà phê G7', discount: '20%', oldPrice: 120000, newPrice: 96000, image: 'https://res.cloudinary.com/dcworyvtj/image/upload/v1764063288/c%C3%A0_ph%C3%AA_g7_t3k7j6.avif' }
+                        ].map((item, idx) => (
+                          <div key={idx} className="bg-white rounded-xl p-4 hover:shadow-2xl transform hover:scale-105 transition-all">
+                            <div className="relative">
+                              <img src={item.image} alt={item.name} className="w-full h-48 object-cover rounded-lg mb-3" />
+                              <div className="absolute top-2 right-2 bg-red-600 text-white px-3 py-1 rounded-full font-bold text-sm animate-pulse">
+                                -{item.discount}
+                              </div>
+                            </div>
+                            <h3 className="font-bold text-lg text-gray-900 mb-2">{item.name}</h3>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-gray-400 line-through text-sm">{Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.oldPrice)}</p>
+                                <p className="text-red-600 font-bold text-xl">{Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.newPrice)}</p>
+                              </div>
+                              <Link to="/products" className="bg-gradient-to-r from-red-600 to-orange-600 text-white px-4 py-2 rounded-lg font-bold hover:shadow-lg">
+                                Mua
+                              </Link>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+              
               <ProductShowcase addToCart={addToCart} />
               
               {/* Các section chỉ hiển thị khi chưa đăng nhập Buyer */}
@@ -339,6 +417,41 @@ function App() {
 
                   {/* Dashboard and Ready-to-Transform sections removed per request */}
                 </>
+              )}
+              
+              {/* Testimonials Section - Đánh giá khách hàng */}
+              {user && user.role === 'buyer' && (
+                <section className="py-16 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
+                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center mb-12">
+                      <h2 className="text-4xl font-bold text-white mb-4">💬 Khách hàng nói gì về chúng tôi</h2>
+                      <p className="text-xl text-white/90">Hàng nghìn doanh nghiệp tin tưởng Fsourcing</p>
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-8">
+                      {[
+                        { name: 'Nguyễn Văn A', company: 'ABC Corp', rating: 5, comment: 'Sản phẩm chất lượng, giao hàng nhanh. Tôi rất hài lòng với dịch vụ!', avatar: '👨‍💼' },
+                        { name: 'Trần Thị B', company: 'XYZ Ltd', rating: 5, comment: 'Giá cả cạnh tranh, hỗ trợ tận tình. Sẽ tiếp tục sử dụng dịch vụ.', avatar: '👩‍💼' },
+                        { name: 'Lê Minh C', company: 'DEF Inc', rating: 5, comment: 'Nền tảng dễ sử dụng, tìm được nhiều nhà cung cấp uy tín. Rất tốt!', avatar: '👨‍🔧' }
+                      ].map((testimonial, idx) => (
+                        <div key={idx} className="bg-white rounded-2xl p-6 shadow-2xl hover:shadow-3xl transform hover:-translate-y-2 transition-all">
+                          <div className="flex items-center mb-4">
+                            <div className="text-4xl mr-3">{testimonial.avatar}</div>
+                            <div>
+                              <h4 className="font-bold text-gray-900">{testimonial.name}</h4>
+                              <p className="text-sm text-gray-500">{testimonial.company}</p>
+                            </div>
+                          </div>
+                          <div className="flex mb-3">
+                            {[...Array(testimonial.rating)].map((_, i) => (
+                              <Star key={i} className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+                            ))}
+                          </div>
+                          <p className="text-gray-600 italic">"{testimonial.comment}"</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </section>
               )}
             </>
           } />
