@@ -2,6 +2,8 @@
 // Handles cart operations: get, add, update, delete items
 // TEMPORARY: Using localStorage instead of backend API (in-memory DB issue)
 
+import { logger } from '../utils/logger';
+
 // Keep these for future use when backend is ready
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api';
@@ -19,35 +21,28 @@ function getAuthToken(): string | null {
   
   const selectedToken = buyerToken || sellerToken || token || null;
   
-  // Debug: decode JWT to check payload and expiry
+  // Decode token payload to check expiry (concise logs)
   if (selectedToken) {
     try {
       const parts = selectedToken.split('.');
       if (parts.length === 3) {
         const payload = JSON.parse(atob(parts[1]));
-        console.log('🔍 JWT Payload:', payload);
-        console.log('🔍 User ID claim:', payload.sub || payload.userId || payload.nameid || payload.id || 'NOT FOUND');
-        console.log('🔍 Token exp:', payload.exp ? new Date(payload.exp * 1000).toLocaleString() : 'No expiry');
-        
         const isExpired = payload.exp ? (payload.exp * 1000 < Date.now()) : false;
-        console.log('🔍 Token expired?', isExpired);
-        
-        // If token is expired, clear it and return null
+        logger.debug('CartService', 'token payload', { userId: payload.sub || payload.userId || payload.nameid || payload.id || null, isExpired });
         if (isExpired) {
-          console.warn('⚠️ Token expired, clearing localStorage and redirecting to login...');
+          logger.warn('CartService', 'token expired - clearing tokens');
           localStorage.removeItem('buyerToken');
           localStorage.removeItem('sellerToken');
           localStorage.removeItem('token');
-          // Redirect to login page
           window.location.href = '/login';
           return null;
         }
       }
     } catch (e) {
-      console.error('❌ Invalid JWT format:', e);
+      logger.error('CartService', 'invalid JWT format', e);
     }
   } else {
-    console.warn('⚠️ No auth token found in localStorage');
+    logger.debug('CartService', 'no auth token found');
   }
   
   return selectedToken;
@@ -95,49 +90,163 @@ export interface Cart {
 }
 
 /**
- * Get current user's cart
- * TEMPORARY: Using local storage instead of backend API
+ * Get current user's cart from backend
  */
 export async function getCart(): Promise<Cart> {
-  console.log('📦 Getting LOCAL cart (API disabled)');
-  const existingCartJson = localStorage.getItem('localCart');
+  logger.debug('CartService', 'getCart from API');
   
-  if (!existingCartJson) {
-    const emptyCart: Cart = { items: [], totalAmount: 0 };
-    console.log('✅ No cart found, returning empty cart');
-    return emptyCart;
+  const token = getAuthToken();
+  if (!token) {
+    logger.warn('CartService', 'no auth token - returning empty cart');
+    localStorage.removeItem('cartId');
+    localStorage.removeItem('lastCartUserId');
+    return { items: [], totalAmount: 0 };
   }
   
-  const cart: Cart = JSON.parse(existingCartJson);
-  
-  // Migration: Check if items have required fields (name, price, image)
-  // If any item is missing these fields, clear the cart (old data format)
-  const hasInvalidItems = cart.items.some(item => 
-    !item.productName && !item.price && !item.image
-  );
-  
-  if (hasInvalidItems) {
-    console.warn('⚠️ Found old cart data format without product details. Clearing cart...');
-    const emptyCart: Cart = { items: [], totalAmount: 0 };
-    localStorage.setItem('localCart', JSON.stringify(emptyCart));
-    return emptyCart;
+  // Extract userId from token to validate cart ownership
+  let currentUserId: string | null = null;
+  try {
+    const parts = token.split('.');
+    if (parts.length === 3) {
+      const payload = JSON.parse(atob(parts[1]));
+      currentUserId = payload.sub || payload.userId || payload.nameid || payload.id || null;
+    }
+  } catch (e) {
+    logger.error('CartService', 'failed to decode token', e);
   }
   
-  console.log('✅ Local cart retrieved:', cart);
-  return cart;
-  
-  /* ORIGINAL API CODE (DISABLED)
-  const res = await fetch(`${API_BASE}/cart`, {
-    method: 'GET',
-    headers: getHeaders(),
-  });
-  return handleResponse(res);
-  */
+  try {
+    // Get cartId from localStorage or create new cart
+    let cartId = localStorage.getItem('cartId');
+    let lastCartUserId = localStorage.getItem('lastCartUserId');
+    let needsNewCart = false;
+    
+    // Check if user has changed
+    if (currentUserId && lastCartUserId && currentUserId !== lastCartUserId) {
+      logger.warn('CartService', 'user changed, clearing old cart', { 
+        oldUserId: lastCartUserId, 
+        newUserId: currentUserId 
+      });
+      localStorage.removeItem('cartId');
+      cartId = null;
+      needsNewCart = true;
+    }
+    
+    // Verify cart ownership if cartId exists
+    if (cartId && currentUserId) {
+      try {
+        const verifyRes = await fetch(`${API_BASE}/Cart/${cartId}`, {
+          method: 'GET',
+          headers: getHeaders(),
+        });
+        
+        // If cart doesn't exist or doesn't belong to current user, clear it
+        if (verifyRes.status === 404 || verifyRes.status === 403 || verifyRes.status === 400) {
+          logger.warn('CartService', 'cached cartId invalid or does not belong to user, clearing');
+          localStorage.removeItem('cartId');
+          cartId = null;
+          needsNewCart = true;
+        }
+      } catch (e) {
+        logger.warn('CartService', 'failed to verify cart ownership', e);
+        localStorage.removeItem('cartId');
+        cartId = null;
+        needsNewCart = true;
+      }
+    }
+    
+    if (!cartId) {
+      // Create new cart
+      const createRes = await fetch(`${API_BASE}/Cart`, {
+        method: 'POST',
+        headers: getHeaders(),
+      });
+      const createData = await handleResponse(createRes);
+      cartId = createData.data?.id;
+      if (cartId) {
+        localStorage.setItem('cartId', cartId);
+        // Track which user owns this cart
+        if (currentUserId) {
+          localStorage.setItem('lastCartUserId', currentUserId);
+        }
+        logger.info('CartService', 'new cart created', { cartId, userId: currentUserId });
+      }
+    }
+    
+    if (!cartId) {
+      return { items: [], totalAmount: 0 };
+    }
+    
+    // Get cart items
+    const res = await fetch(`${API_BASE}/Cart/${cartId}`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    
+    const data = await handleResponse(res);
+    const items = data.data || [];
+    
+    logger.debug('CartService', 'cart retrieved from API', { itemCount: items.length });
+    
+    // Fetch product details for each cart item
+    const itemsWithDetails = await Promise.all(
+      items.map(async (item: any) => {
+        try {
+          const productRes = await fetch(`${API_BASE}/Products/${item.productId}`, {
+            method: 'GET',
+            headers: getHeaders(),
+          });
+          
+          if (productRes.ok) {
+            const productData = await productRes.json();
+            const product = productData.data || productData;
+            
+            logger.debug('CartService', `product data for ${item.productId}`, { 
+              name: product.name, 
+              image: product.image,
+              rawProduct: product
+            });
+            
+            return {
+              id: item.id,
+              productId: item.productId,
+              productName: product.name || product.productName || product.Name || 'Sản phẩm',
+              quantity: item.quantity,
+              price: item.price || product.price || product.Price || 0,
+              image: product.image || product.Image || product.imagePath || product.ImagePath || 'https://via.placeholder.com/150'
+            };
+          } else {
+            logger.warn('CartService', `failed to fetch product ${item.productId}`, { status: productRes.status });
+          }
+        } catch (err) {
+          logger.error('CartService', `error fetching product ${item.productId}`, err);
+        }
+        
+        // Fallback if product fetch fails
+        return {
+          id: item.id,
+          productId: item.productId,
+          productName: 'Sản phẩm không xác định',
+          quantity: item.quantity,
+          price: item.price,
+          image: 'https://via.placeholder.com/150'
+        };
+      })
+    );
+    
+    return {
+      id: cartId,
+      items: itemsWithDetails,
+      totalAmount: itemsWithDetails.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0)
+    };
+  } catch (error) {
+    logger.error('CartService', 'failed to get cart', error);
+    return { items: [], totalAmount: 0 };
+  }
 }
 
 /**
- * Add item to cart
- * TEMPORARY: Using local storage instead of backend API (in-memory DB issue)
+ * Add item to cart using backend API
  */
 export async function addCartItem(
   productId: string, 
@@ -146,171 +255,145 @@ export async function addCartItem(
 ): Promise<Cart> {
   // Validate productId is a valid GUID
   if (!isValidGuid(productId)) {
-    throw new Error(`Invalid product ID format: "${productId}". Expected a valid GUID (e.g., "3fa85f64-5717-4562-b3fc-2c963f66afa6").`);
+    throw new Error(`Invalid product ID format: "${productId}". Expected a valid GUID.`);
   }
   
-  console.log('📦 Adding to LOCAL cart (API disabled):', { productId, quantity, productInfo });
+  logger.debug('CartService', 'addCartItem to API', { productId, quantity });
   
-  // Get existing cart from localStorage
-  const existingCartJson = localStorage.getItem('localCart');
-  const existingCart: Cart = existingCartJson ? JSON.parse(existingCartJson) : { items: [], totalAmount: 0 };
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Authentication required to add items to cart');
+  }
   
-  // Check if item already exists
-  const existingItemIndex = existingCart.items.findIndex(item => item.productId === productId);
+  // Get or create cartId - validation happens in getCart()
+  let cartId = localStorage.getItem('cartId');
+  let lastCartUserId = localStorage.getItem('lastCartUserId');
   
-  if (existingItemIndex >= 0) {
-    // Update quantity and merge product info if provided
-    existingCart.items[existingItemIndex] = {
-      ...existingCart.items[existingItemIndex],
-      quantity: existingCart.items[existingItemIndex].quantity + quantity,
-      ...(productInfo?.name && { productName: productInfo.name }),
-      ...(productInfo?.price !== undefined && { price: productInfo.price }),
-      ...(productInfo?.image && { image: productInfo.image }),
-    };
-  } else {
-    // Add new item with all available info
-    existingCart.items.push({
-      id: `local-${Date.now()}`,
-      productId,
-      quantity,
-      ...(productInfo?.name && { productName: productInfo.name }),
-      ...(productInfo?.price !== undefined && { price: productInfo.price }),
-      ...(productInfo?.image && { image: productInfo.image }),
+  // Get current user ID from token
+  let currentUserId: string | null = null;
+  try {
+    const parts = token.split('.');
+    if (parts.length === 3) {
+      const payload = JSON.parse(atob(parts[1]));
+      currentUserId = payload.sub || payload.userId || payload.nameid || payload.id || null;
+    }
+  } catch (e) {
+    logger.error('CartService', 'failed to decode token', e);
+  }
+  
+  // Check if user has changed
+  if (currentUserId && lastCartUserId && currentUserId !== lastCartUserId) {
+    logger.warn('CartService', 'user changed, clearing old cart for add item', { 
+      oldUserId: lastCartUserId, 
+      newUserId: currentUserId 
     });
+    localStorage.removeItem('cartId');
+    cartId = null;
   }
   
-  // Save back to localStorage
-  localStorage.setItem('localCart', JSON.stringify(existingCart));
-  console.log('✅ Local cart updated:', existingCart);
+  if (!cartId) {
+    const createRes = await fetch(`${API_BASE}/Cart`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    const createData = await handleResponse(createRes);
+    cartId = createData.data?.id;
+    if (cartId) {
+      localStorage.setItem('cartId', cartId);
+      // Track which user owns this cart
+      if (currentUserId) {
+        localStorage.setItem('lastCartUserId', currentUserId);
+      }
+      logger.info('CartService', 'new cart created for add item', { cartId, userId: currentUserId });
+    }
+  }
   
-  // Emit custom event to notify other components
-  window.dispatchEvent(new Event('cartUpdated'));
+  if (!cartId) {
+    throw new Error('Failed to create cart');
+  }
   
-  return existingCart;
-  
-  /* ORIGINAL API CODE (DISABLED)
   const payload = {
     productId,
     quantity,
+    price: productInfo?.price || 0
   };
   
-  console.log('📤 Adding to cart:', payload);
-  
-  const res = await fetch(`${API_BASE}/cart/items`, {
+  const res = await fetch(`${API_BASE}/Cart/${cartId}/items`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(payload),
   });
   
-  if (!res.ok) {
-    const errorText = await res.text().catch(() => '');
-    console.error('❌ Cart API Error:', {
-      status: res.status,
-      statusText: res.statusText,
-      body: errorText
-    });
-    
-    if (errorText.includes('Product not found')) {
-      throw new Error(`Product with ID "${productId}" does not exist in backend database. Please ensure products are created in backend first, or fetch products from /api/products endpoint instead of using mock data.`);
-    }
-    
-    throw new Error(errorText || `Request failed: ${res.status} ${res.statusText}`);
-  }
-  
-  return handleResponse(res);
-  */
-}
-
-/**
- * Update cart item quantity
- * TEMPORARY: Using local storage instead of backend API
- */
-export async function updateCartItem(itemId: string, quantity: number): Promise<Cart> {
-  console.log('📦 Updating LOCAL cart item (API disabled):', { itemId, quantity });
-  
-  const existingCartJson = localStorage.getItem('localCart');
-  const existingCart: Cart = existingCartJson ? JSON.parse(existingCartJson) : { items: [], totalAmount: 0 };
-  
-  const itemIndex = existingCart.items.findIndex(item => item.id === itemId);
-  if (itemIndex >= 0) {
-    if (quantity <= 0) {
-      // Remove item if quantity is 0 or negative
-      existingCart.items.splice(itemIndex, 1);
-    } else {
-      // Keep all existing fields (name, price, image, etc) and only update quantity
-      existingCart.items[itemIndex] = {
-        ...existingCart.items[itemIndex],
-        quantity
-      };
-    }
-  }
-  
-  localStorage.setItem('localCart', JSON.stringify(existingCart));
-  console.log('✅ Local cart updated:', existingCart);
+  await handleResponse(res);
   
   // Emit custom event to notify other components
   window.dispatchEvent(new Event('cartUpdated'));
   
-  return existingCart;
+  // Refresh and return cart
+  return await getCart();
+}
+
+/**
+ * Update cart item quantity using backend API
+ */
+export async function updateCartItem(productId: string, quantity: number): Promise<Cart> {
+  logger.debug('CartService', 'updateCartItem via API', { productId, quantity });
   
-  /* ORIGINAL API CODE (DISABLED)
-  const res = await fetch(`${API_BASE}/cart/items/${itemId}`, {
-    method: 'PATCH',
+  const cartId = localStorage.getItem('cartId');
+  if (!cartId) {
+    throw new Error('No cart found');
+  }
+  
+  if (quantity <= 0) {
+    return await deleteCartItem(productId);
+  }
+  
+  const res = await fetch(`${API_BASE}/Cart/${cartId}/items/${productId}`, {
+    method: 'PUT',
     headers: getHeaders(),
     body: JSON.stringify({ quantity }),
   });
-  return handleResponse(res);
-  */
-}
-
-/**
- * Delete item from cart
- * TEMPORARY: Using local storage instead of backend API
- */
-export async function deleteCartItem(itemId: string): Promise<Cart> {
-  console.log('📦 Deleting from LOCAL cart (API disabled):', itemId);
   
-  const existingCartJson = localStorage.getItem('localCart');
-  const existingCart: Cart = existingCartJson ? JSON.parse(existingCartJson) : { items: [], totalAmount: 0 };
-  
-  existingCart.items = existingCart.items.filter(item => item.id !== itemId);
-  
-  localStorage.setItem('localCart', JSON.stringify(existingCart));
-  console.log('✅ Local cart updated:', existingCart);
+  await handleResponse(res);
   
   // Emit custom event to notify other components
   window.dispatchEvent(new Event('cartUpdated'));
   
-  return existingCart;
-  
-  /* ORIGINAL API CODE (DISABLED)
-  const res = await fetch(`${API_BASE}/cart/items/${itemId}`, {
-    method: 'DELETE',
-    headers: getHeaders(),
-  });
-  return handleResponse(res);
-  */
+  return await getCart();
 }
 
 /**
- * Clear entire cart
- * TEMPORARY: Using local storage instead of backend API
+ * Delete item from cart using backend API
+ */
+export async function deleteCartItem(productId: string): Promise<Cart> {
+  logger.debug('CartService', 'deleteCartItem via API', { productId });
+  
+  const cartId = localStorage.getItem('cartId');
+  if (!cartId) {
+    throw new Error('No cart found');
+  }
+  
+  const res = await fetch(`${API_BASE}/Cart/${cartId}/items/${productId}`, {
+    method: 'DELETE',
+    headers: getHeaders(),
+  });
+  
+  await handleResponse(res);
+  
+  // Emit custom event to notify other components
+  window.dispatchEvent(new Event('cartUpdated'));
+  
+  return await getCart();
+}
+
+/**
+ * Clear entire cart by removing cartId
  */
 export async function clearCart(): Promise<void> {
-  console.log('📦 Clearing LOCAL cart (API disabled)');
+  logger.debug('CartService', 'clearCart');
   
-  const emptyCart: Cart = { items: [], totalAmount: 0 };
-  localStorage.setItem('localCart', JSON.stringify(emptyCart));
-  console.log('✅ Local cart cleared');
+  localStorage.removeItem('cartId');
   
   // Emit custom event to notify other components
   window.dispatchEvent(new Event('cartUpdated'));
-  
-  /* ORIGINAL API CODE (DISABLED)
-  const res = await fetch(`${API_BASE}/cart`, {
-    method: 'DELETE',
-    headers: getHeaders(),
-  });
-  await handleResponse(res);
-  */
 }

@@ -1,54 +1,112 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaUserCircle, FaBoxOpen, FaClipboardList, FaBell } from 'react-icons/fa';
+import { dashboardService } from '../../services/dashboardService';
+import { productService } from '../../services/productService';
+import { orderService } from '../../services/orderService';
+import { notificationService } from '../../services/notificationService';
+import { logger } from '../../utils/logger';
 
 const SellerDashboard: React.FC = () => {
   const [sellerProfile, setSellerProfile] = useState<any | null>(null);
   const [products, setProducts] = useState<any[]>([]);
+  const [ordersCount, setOrdersCount] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const navigate = useNavigate();
 
   useEffect(() => {
-    const sp = localStorage.getItem('sellerProfile');
-    setSellerProfile(sp ? JSON.parse(sp) : null);
-
-    // Fetch seller products from backend (server-only). If API unavailable, show empty list.
     let mounted = true;
-    (async () => {
+    
+    const fetchDashboardData = async () => {
       try {
-        /* API TEMPORARILY DISABLED - USING LOCAL STORAGE ONLY
-        const resp = await (await import('../../services/apiClient')).default.productsApi.list();
-        // Normalize response to an array of items. The generated client may return
-        // different shapes, for example: a plain array, { data: [...] },
-        // { items: [...] } or { data: { items: [...] } }.
-        let items: any[] = [];
-        const anyResp: any = resp;
-        if (Array.isArray(anyResp)) {
-          items = anyResp;
-        } else if (Array.isArray(anyResp?.data)) {
-          items = anyResp.data;
-        } else if (Array.isArray(anyResp?.items)) {
-          items = anyResp.items;
-        } else if (Array.isArray(anyResp?.data?.items)) {
-          items = anyResp.data.items;
+        setIsLoading(true);
+        logger.info('SellerDashboard', '📊 Fetching dashboard data...');
+
+        // Fetch all dashboard data in parallel including profile
+        const [profileResp, productsResp, ordersResp] = await Promise.allSettled([
+          dashboardService.getProfile(),
+          productService.getMyProducts(),
+          orderService.getReceivedOrders(1, 10)
+        ]);
+
+        if (!mounted) return;
+
+        // Handle profile
+        if (profileResp.status === 'fulfilled') {
+          const profileData = profileResp.value;
+          setSellerProfile(profileData);
+          logger.info('SellerDashboard', '✅ Loaded seller profile', { profileData });
+          
+          // Check if profile is complete
+          if (!profileData || !profileData.companyName) {
+            logger.info('SellerDashboard', '⚠️ Profile incomplete - redirecting to profile edit');
+            navigate('/seller/profile', { 
+              state: { message: 'Vui lòng hoàn thành thông tin hồ sơ để tiếp tục' } 
+            });
+            return;
+          }
+          
+          // Save to localStorage as backup
+          if (profileData) {
+            localStorage.setItem('sellerProfile', JSON.stringify(profileData));
+          }
         } else {
-          items = [];
+          logger.warn('SellerDashboard', '⚠️ Failed to fetch profile, using localStorage fallback');
+          const localProfile = localStorage.getItem('sellerProfile');
+          const profile = localProfile ? JSON.parse(localProfile) : null;
+          setSellerProfile(profile);
+          
+          // Check if profile is complete
+          if (!profile || !profile.companyName) {
+            logger.info('SellerDashboard', '⚠️ No profile found - redirecting to profile edit');
+            navigate('/seller/profile', { 
+              state: { message: 'Vui lòng hoàn thành thông tin hồ sơ để tiếp tục' } 
+            });
+            return;
+          }
         }
-        if (mounted) setProducts(items);
-        */
-        
-        // Local storage fallback
-        const localProducts = localStorage.getItem('sellerProducts');
-        if (localProducts) {
-          setProducts(JSON.parse(localProducts));
+
+        // Handle products
+        if (productsResp.status === 'fulfilled') {
+          const productsData = productsResp.value || [];
+          setProducts(productsData);
+          logger.info('SellerDashboard', `✅ Loaded ${productsData.length} products`);
+          
+          // Save to localStorage as backup
+          localStorage.setItem('sellerProducts', JSON.stringify(productsData));
         } else {
-          setProducts([]);
+          logger.warn('SellerDashboard', '⚠️ Failed to fetch products, using localStorage fallback');
+          const localProducts = localStorage.getItem('sellerProducts');
+          setProducts(localProducts ? JSON.parse(localProducts) : []);
         }
+
+        // Handle orders
+        if (ordersResp.status === 'fulfilled') {
+          const ordersData = ordersResp.value?.data?.total || 0;
+          setOrdersCount(ordersData);
+          logger.info('SellerDashboard', `✅ Loaded orders count: ${ordersData}`);
+        } else {
+          logger.warn('SellerDashboard', '⚠️ Failed to fetch orders');
+          setOrdersCount(0);
+        }
+
+        setIsLoading(false);
       } catch (err) {
-        console.warn('Failed to fetch seller products for dashboard', err);
-        if (mounted) setProducts([]);
+        logger.error('SellerDashboard', '❌ Failed to fetch dashboard data', err);
+        
+        // Fallback to localStorage
+        const localProducts = localStorage.getItem('sellerProducts');
+        if (mounted) {
+          setProducts(localProducts ? JSON.parse(localProducts) : []);
+          setOrdersCount(0);
+          setIsLoading(false);
+        }
       }
-    })();
+    };
+
+    fetchDashboardData();
+
     return () => { mounted = false; };
   }, []);
 
@@ -99,22 +157,34 @@ const SellerDashboard: React.FC = () => {
     );
   }
 
-  const sellerName = sellerProfile?.company || sellerProfile?.fullName || 'Seller';
-  const email = sellerProfile?.email || '';
+  const sellerName = sellerProfile?.companyName || sellerProfile?.legalRepresentative || 'Seller';
+  const email = sellerProfile?.emailAddress || localStorage.getItem('userEmail') || '';
   const productsCount = products.length;
-  const ordersCount = 0; // placeholder (could be wired to real data)
-  const notificationsCount = 0;
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="bg-app min-h-screen font-sans flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-600">Đang tải dữ liệu dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-app min-h-screen font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <h2 className="text-2xl font-bold mb-6">Bảng điều khiển Người bán</h2>
-        <div className="mb-8 bg-white rounded-lg shadow p-6 flex flex-col sm:flex-row items-center justify-between">
-          <div>
-            <div className="font-semibold text-lg">{sellerName}</div>
-            <div className="text-gray-600 text-sm">Email: {email}</div>
+        <div className="mb-8 bg-white rounded-lg shadow p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 pb-4 border-b">
+            <div>
+              <div className="font-semibold text-lg">{sellerName}</div>
+              <div className="text-gray-600 text-sm">Email: {email}</div>
+            </div>
           </div>
-          <div className="flex gap-6 mt-4 sm:mt-0">
+          <div className="flex gap-6 flex-wrap">
             <div className="text-center">
               <div className="font-bold text-blue-600 text-xl">{productsCount}</div>
               <div className="text-xs text-gray-500">Sản phẩm đang bán</div>
@@ -123,13 +193,9 @@ const SellerDashboard: React.FC = () => {
               <div className="font-bold text-green-600 text-xl">{ordersCount}</div>
               <div className="text-xs text-gray-500">Đơn hàng đã bán</div>
             </div>
-            <div className="text-center">
-              <div className="font-bold text-red-600 text-xl">{notificationsCount}</div>
-              <div className="text-xs text-gray-500">Thông báo mới</div>
-            </div>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
           <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center">
             <FaUserCircle className="w-16 h-16 mb-4 text-blue-400" />
             <h3 className="font-semibold text-lg mb-2">Thông tin cá nhân</h3>
@@ -144,11 +210,6 @@ const SellerDashboard: React.FC = () => {
             <FaClipboardList className="w-16 h-16 mb-4 text-orange-400" />
             <h3 className="font-semibold text-lg mb-2">Quản lý đơn hàng</h3>
             <Link to="/seller/orders" className="text-blue-600 hover:underline">Xem danh sách đơn hàng</Link>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6 flex flex-col items-center">
-            <FaBell className="w-16 h-16 mb-4 text-red-400" />
-            <h3 className="font-semibold text-lg mb-2">Thông báo mới</h3>
-            <Link to="/seller/notifications" className="text-blue-600 hover:underline">Xem tất cả thông báo</Link>
           </div>
         </div>
       </div>

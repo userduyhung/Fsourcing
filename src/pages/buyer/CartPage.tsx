@@ -5,6 +5,7 @@ import { updateCartItem, deleteCartItem, getCart } from '../../services/cartServ
 import { sanitizeCartItems } from '../../utils/cartValidation';
 import { validateCart, validateQuantityUpdate } from '../../utils/purchaseValidation';
 import showAppToast from '../../utils/toast';
+import { logger } from '../../utils/logger';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
@@ -18,10 +19,13 @@ const CartPage: React.FC = () => {
     let mounted = true;
     const load = async () => {
       try {
+        logger.debug('CartPage', 'loading cart on mount');
         const stored = await getCart();
         if (!mounted) return;
+        logger.debug('CartPage', 'cart loaded', { itemCount: stored.items.length, items: stored.items });
         setCartState(sanitizeCartItems(stored.items as any));
       } catch (e) {
+        logger.error('CartPage', 'failed to load cart', e);
         console.error('Failed to load cart from storage', e);
       }
     };
@@ -32,17 +36,16 @@ const CartPage: React.FC = () => {
   const refreshFromStorage = async () => {
     try {
       const stored = await getCart();
-      console.log('🔍 Raw cart from storage:', stored);
-      console.log('🔍 Cart items:', stored.items);
+      logger.debug('CartPage', 'raw cart from storage', { itemCount: stored.items.length });
       const sanitized = sanitizeCartItems(stored.items as any);
-      console.log('🔍 Sanitized cart items:', sanitized);
+      logger.debug('CartPage', 'sanitized cart items', { itemCount: sanitized.length });
       setCartState(sanitized);
     } catch (e) {
       console.error('Failed to refresh cart from storage', e);
     }
   };
 
-  const updateQuantity = async (id: string, quantity: number) => {
+  const updateQuantity = async (productId: string, quantity: number) => {
     // Validate quantity before update
     const validation = validateQuantityUpdate(quantity);
     if (!validation.isValid) {
@@ -55,27 +58,27 @@ const CartPage: React.FC = () => {
       showAppToast(validation.warnings[0], 'warning', 2500);
     }
     
-    setUpdatingIds((s) => (s.includes(id) ? s : [...s, id]));
+    setUpdatingIds((s) => (s.includes(productId) ? s : [...s, productId]));
     try {
-      await updateCartItem(id, quantity);
+      await updateCartItem(productId, quantity);
       await refreshFromStorage();
     } catch (err) {
       console.error('Failed to update cart item:', err);
       showAppToast('Không thể cập nhật số lượng', 'error', 2000);
     } finally {
-      setUpdatingIds((prev) => prev.filter((x) => x !== id));
+      setUpdatingIds((prev) => prev.filter((x) => x !== productId));
     }
   };
 
-  const handleRemove = async (id: string) => {
-    setUpdatingIds((s) => (s.includes(id) ? s : [...s, id]));
+  const handleRemove = async (productId: string) => {
+    setUpdatingIds((s) => (s.includes(productId) ? s : [...s, productId]));
     try {
-      await deleteCartItem(id);
+      await deleteCartItem(productId);
       await refreshFromStorage();
     } catch (err) {
       console.error('Failed to remove cart item:', err);
     } finally {
-      setUpdatingIds((prev) => prev.filter((x) => x !== id));
+      setUpdatingIds((prev) => prev.filter((x) => x !== productId));
     }
   };
 
@@ -122,25 +125,36 @@ const CartPage: React.FC = () => {
           <div className="md:col-span-2 bg-white p-4 rounded shadow-sm">
             <ul className="space-y-4">
               {cartState.map((item) => {
-                const isUpdating = updatingIds.includes(item.id);
+                const isUpdating = updatingIds.includes(item.productId);
+                const displayName = item.productName || item.name || 'Sản phẩm';
+                const displayImage = item.image || 'https://via.placeholder.com/150?text=No+Image';
+                const displayPrice = Number(item.price) || 0;
+                
                 return (
-                  <li key={item.id} className="flex gap-4 items-start">
-                    <img src={item.image} alt={item.name} className="w-20 h-20 object-cover rounded" />
+                  <li key={item.productId} className="flex gap-4 items-start">
+                    <img 
+                      src={displayImage} 
+                      alt={displayName} 
+                      className="w-20 h-20 object-cover rounded"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150?text=No+Image';
+                      }}
+                    />
                     <div className="flex-1">
                       <div className="flex justify-between items-start">
                         <div>
-                          <div className="font-medium">{item.name}</div>
-                          <div className="text-sm text-gray-500">{formatCurrency(Number(item.price) || 0)}</div>
+                          <div className="font-medium">{displayName}</div>
+                          <div className="text-sm text-gray-500">{formatCurrency(displayPrice)}</div>
                         </div>
                         <div className="text-right">
-                          <div className="text-sm text-gray-700">{formatCurrency((Number(item.price) || 0) * item.quantity)}</div>
+                          <div className="text-sm text-gray-700">{formatCurrency(displayPrice * item.quantity)}</div>
                         </div>
                       </div>
                       <div className="mt-2 flex items-center gap-3">
                         <div className={`flex items-center border rounded-md overflow-hidden ${isUpdating ? 'opacity-60' : ''}`}>
                           <button
                             className="px-3 py-1 bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            onClick={() => updateQuantity(item.productId, item.quantity - 1)}
                             aria-label="Giảm số lượng"
                             disabled={isUpdating}
                           >
@@ -150,13 +164,13 @@ const CartPage: React.FC = () => {
                             type="number"
                             min={1}
                             value={item.quantity}
-                            onChange={(e) => updateQuantity(item.id, Number(e.target.value))}
+                            onChange={(e) => updateQuantity(item.productId, Number(e.target.value))}
                             className="w-16 text-center px-2 py-1 outline-none no-spin"
                             disabled={isUpdating}
                           />
                           <button
                             className="px-3 py-1 bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                             aria-label="Tăng số lượng"
                             disabled={isUpdating}
                           >
@@ -165,7 +179,7 @@ const CartPage: React.FC = () => {
                         </div>
 
                         <button
-                          onClick={() => handleRemove(item.id)}
+                          onClick={() => handleRemove(item.productId)}
                           className="text-sm text-red-600 bg-red-50 px-3 py-1 rounded hover:bg-red-100 disabled:opacity-50"
                           disabled={isUpdating}
                         >

@@ -52,18 +52,18 @@ export interface ChangePasswordRequest {
 }
 
 import apiClient from './apiClient';
+import { logger } from '../utils/logger';
 
 class AuthService {
   /**
    * Normalize different backend response formats
    */
   private normalizeAuthResponse(response: any): AuthResponse {
-    console.log('==== NORMALIZING AUTH RESPONSE ====');
-    console.log('Raw response:', response);
+    logger.debug('AuthService', 'normalizeAuthResponse', { hasData: !!response.data, hasToken: !!response.token });
 
     // NEW: Backend format: {data: {token, user, userId, expiresIn}, timestamp}
     if (response.data?.token && response.data?.user) {
-      console.log('✓ Matched format: data.token + data.user');
+      logger.debug('AuthService', 'matched format: data.token + data.user');
       const normalized = {
         token: response.data.token,
         user: {
@@ -78,14 +78,13 @@ class AuthService {
         },
         message: response.message
       };
-      console.log('Normalized:', normalized);
-      console.log('===================================');
+      logger.debug('AuthService', 'normalized response', { token: !!normalized.token, userId: normalized.user?.id });
       return normalized;
     }
 
     // Direct format: {token, user, message}
     if (response.token && response.user) {
-      console.log('✓ Matched format: direct token + user');
+      logger.debug('AuthService', 'matched format: direct token + user');
       return {
         token: response.token,
         user: response.user,
@@ -95,7 +94,7 @@ class AuthService {
 
     // Nested in result: {result: {token, user}}
     if (response.result?.token && response.result?.user) {
-      console.log('✓ Matched format: result.token + result.user');
+      logger.debug('AuthService', 'matched format: result.token + result.user');
       return {
         token: response.result.token,
         user: response.result.user,
@@ -105,7 +104,7 @@ class AuthService {
 
     // Token in data, user at top level
     if (response.data?.token && response.user) {
-      console.log('✓ Matched format: data.token + user');
+      logger.debug('AuthService', 'matched format: data.token + user');
       return {
         token: response.data.token,
         user: response.user,
@@ -115,7 +114,7 @@ class AuthService {
 
     // User in data, token at top level
     if (response.token && response.data?.user) {
-      console.log('✓ Matched format: token + data.user');
+      logger.debug('AuthService', 'matched format: token + data.user');
       return {
         token: response.token,
         user: response.data.user,
@@ -124,9 +123,7 @@ class AuthService {
     }
 
     // Return as-is if none of the patterns match
-    console.warn('==== UNRECOGNIZED RESPONSE FORMAT ====');
-    console.warn('Response:', response);
-    console.warn('======================================');
+    logger.warn('AuthService', 'unrecognized response format', { hasToken: !!response.token, hasUser: !!response.user });
     return response;
   }
 
@@ -135,28 +132,17 @@ class AuthService {
    */
   async login(data: LoginRequest): Promise<AuthResponse> {
     try {
-      console.log('==== LOGIN REQUEST (apiClient) ====');
-      console.log('Payload:', data);
+      logger.debug('AuthService', 'login request', { email: data.email });
       const result = await apiClient.authApi.login(data);
 
       // apiClient returns the response body or throws on HTTP error
       const normalizedResponse = this.normalizeAuthResponse(result);
 
-      console.log('==== NORMALIZED RESPONSE ====');
-      console.log('Has token:', !!normalizedResponse.token);
-      console.log('Has user:', !!normalizedResponse.user);
-      if (normalizedResponse.user) {
-        console.log('User role:', normalizedResponse.user.role);
-        console.log('User email:', normalizedResponse.user.email);
-        console.log('User fullName:', normalizedResponse.user.fullName);
-      }
-      console.log('=============================');
+      logger.debug('AuthService', 'login success', { hasToken: !!normalizedResponse.token, hasUser: !!normalizedResponse.user, role: normalizedResponse.user?.role });
 
       return normalizedResponse;
     } catch (error) {
-      console.error('==== LOGIN ERROR ====');
-      console.error('Error:', error);
-      console.error('====================');
+      logger.error('AuthService', 'login error', error);
       if (error instanceof Error) {
         throw error;
       }
@@ -169,21 +155,14 @@ class AuthService {
    */
   async register(data: RegisterRequest): Promise<AuthResponse> {
     try {
-      console.log('==== REGISTER REQUEST (apiClient) ====');
-      console.log('Payload:', data);
+      logger.debug('AuthService', 'register request', { email: data.email, role: data.role });
       const result = await apiClient.authApi.register(data);
-
-      console.log('==== REGISTER RESPONSE (apiClient) ====');
-      console.log('Response Data:', result);
+      logger.debug('AuthService', 'register response received', { success: !!result });
 
       // Normalize the registration response
       const normalized = this.normalizeAuthResponse(result);
       
-      console.log('==== NORMALIZED REGISTER RESPONSE ====');
-      console.log('Has token:', !!normalized.token);
-      console.log('Has user:', !!normalized.user);
-      console.log('Message:', normalized.message);
-      console.log('======================================');
+      logger.debug('AuthService', 'normalized register response', { hasToken: !!normalized.token, hasUser: !!normalized.user });
 
       // Return normalized response with success indicator
       return {
@@ -192,9 +171,7 @@ class AuthService {
         message: normalized.message || 'Đăng ký thành công!'
       };
     } catch (error: any) {
-      console.error('==== REGISTER ERROR ====');
-      console.error('Error:', error?.response?.data || error?.message || error);
-      console.error('=======================');
+      logger.error('AuthService', 'register error', error?.response?.data || error?.message || error);
       if (error?.response?.status === 409) {
         throw new Error('Email này đã được đăng ký. Vui lòng sử dụng email khác hoặc đăng nhập.');
       }

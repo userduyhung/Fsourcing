@@ -13,46 +13,78 @@ import {
   XCircle,
   Eye
 } from 'lucide-react';
-
-interface OrderItem {
-  id: string;
-  name: string;
-  quantity: number;
-  price: number;
-  status: 'pending' | 'completed' | 'cancelled';
-  date: string;
-}
+import { orderService, OrderDto } from '../../services/orderService';
+import { logger } from '../../utils/logger';
 
 const BuyerDashboard: React.FC = () => {
   // Scroll to top when mount
   React.useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, []);
   const buyerProfile = JSON.parse(localStorage.getItem('buyerProfile') || '{}');
   
-  // Get cart and orders from localStorage
+  // Get cart from localStorage
   const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-  const [orders] = useState<OrderItem[]>(() => {
-    const savedOrders = localStorage.getItem('buyerOrders');
-    return savedOrders ? JSON.parse(savedOrders) : [];
-  });
+  
+  // Load orders from API
+  const [orders, setOrders] = useState<OrderDto[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>('all');
   
   const [notifications] = useState(() => {
     const saved = localStorage.getItem('buyerNotifications');
     return saved ? JSON.parse(saved) : [];
   });
 
+  useEffect(() => {
+    loadOrders();
+  }, []);
+
+  const loadOrders = async () => {
+    try {
+      setLoadingOrders(true);
+      logger.debug('BuyerDashboard', 'loading orders from API');
+      
+      const response = await orderService.getOrders(1, 10);
+      
+      if (response.success && response.data) {
+        setOrders(response.data.items || []);
+        logger.info('BuyerDashboard', 'orders loaded', { count: response.data.items?.length });
+      }
+    } catch (error: any) {
+      logger.error('BuyerDashboard', 'failed to load orders', error);
+      // Không hiển thị error, chỉ để orders rỗng
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
   const cartItemCount = cart.reduce((sum: number, item: any) => sum + item.quantity, 0);
   const unreadNotifications = notifications.filter((n: any) => !n.read).length;
-  const pendingOrders = orders.filter(o => o.status === 'pending').length;
-  const completedOrders = orders.filter(o => o.status === 'completed').length;
+  const pendingOrders = orders.filter(o => o.status.toLowerCase() === 'pending').length;
+  const completedOrders = orders.filter(o => o.status.toLowerCase() === 'delivered' || o.status.toLowerCase() === 'completed').length;
+
+  // Filter orders based on selected status
+  const filteredOrders = orderStatusFilter === 'all' 
+    ? orders 
+    : orders.filter(o => o.status.toLowerCase() === orderStatusFilter.toLowerCase());
+  
+  const recentOrders = filteredOrders.slice(0, 5);
+
+  const orderStatusTabs = [
+    { value: 'all', label: 'Tất cả', count: orders.length, color: 'blue' },
+    { value: 'pending', label: 'Chờ xác nhận', count: orders.filter(o => o.status.toLowerCase() === 'pending').length, color: 'yellow' },
+    { value: 'confirmed', label: 'Đã xác nhận', count: orders.filter(o => o.status.toLowerCase() === 'confirmed').length, color: 'blue' },
+    { value: 'shipped', label: 'Đang giao', count: orders.filter(o => o.status.toLowerCase() === 'shipped').length, color: 'purple' },
+    { value: 'delivered', label: 'Đã giao', count: orders.filter(o => o.status.toLowerCase() === 'delivered').length, color: 'green' },
+    { value: 'completed', label: 'Hoàn thành', count: orders.filter(o => o.status.toLowerCase() === 'completed').length, color: 'green' },
+    { value: 'cancelled', label: 'Đã hủy', count: orders.filter(o => o.status.toLowerCase() === 'cancelled').length, color: 'red' },
+  ];
 
   const stats = [
     { title: 'Sản phẩm trong giỏ', value: cartItemCount.toString(), change: 'Chưa thanh toán', icon: ShoppingCart, color: 'bg-gradient-to-r from-blue-500 to-blue-400', link: '/cart' },
-    { title: 'Đơn hàng đang xử lý', value: pendingOrders.toString(), change: 'Đang giao', icon: Package, color: 'bg-gradient-to-r from-orange-500 to-orange-400', link: '/buyer/order-detail' },
-    { title: 'Đơn hàng hoàn thành', value: completedOrders.toString(), change: 'Đã giao', icon: CheckCircle, color: 'bg-gradient-to-r from-green-500 to-green-400', link: '/buyer/order-detail' },
+    { title: 'Đơn hàng đang xử lý', value: pendingOrders.toString(), change: 'Đang giao', icon: Package, color: 'bg-gradient-to-r from-orange-500 to-orange-400', link: '/buyer/orders' },
+    { title: 'Đơn hàng hoàn thành', value: completedOrders.toString(), change: 'Đá giao', icon: CheckCircle, color: 'bg-gradient-to-r from-green-500 to-green-400', link: '/buyer/orders' },
     { title: 'Thông báo', value: unreadNotifications.toString(), change: 'Chưa đọc', icon: Bell, color: 'bg-gradient-to-r from-red-500 to-pink-400' }
   ];
-
-  const recentOrders = orders.slice(0, 3);
 
   const recentActivity = [
     { id: 1, action: 'Đặt hàng thành công', from: 'Đơn hàng mới', time: '2 giờ trước', type: 'order' },
@@ -68,20 +100,45 @@ const BuyerDashboard: React.FC = () => {
   ];
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+    const statusLower = status.toLowerCase();
+    switch (statusLower) {
+      case 'delivered':
+      case 'completed': 
+        return 'bg-green-100 text-green-800';
+      case 'pending': 
+        return 'bg-yellow-100 text-yellow-800';
+      case 'confirmed':
+        return 'bg-blue-100 text-blue-800';
+      case 'shipped':
+        return 'bg-purple-100 text-purple-800';
+      case 'cancelled': 
+        return 'bg-red-100 text-red-800';
+      case 'refunded':
+        return 'bg-orange-100 text-orange-800';
+      default: 
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getStatusText = (status: string) => {
-    switch (status) {
-      case 'completed': return 'Hoàn thành';
-      case 'pending': return 'Đang xử lý';
-      case 'cancelled': return 'Đã hủy';
-      default: return status;
+    const statusLower = status.toLowerCase();
+    switch (statusLower) {
+      case 'delivered':
+        return 'Đã giao hàng';
+      case 'completed': 
+        return 'Hoàn thành';
+      case 'pending': 
+        return 'Chờ xác nhận';
+      case 'confirmed':
+        return 'Đã xác nhận';
+      case 'shipped':
+        return 'Đang giao hàng';
+      case 'cancelled': 
+        return 'Đã hủy';
+      case 'refunded':
+        return 'Đã hoàn tiền';
+      default: 
+        return status;
     }
   };
 
@@ -101,18 +158,52 @@ const BuyerDashboard: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Hero Section */}
-      <div className="relative rounded-xl overflow-hidden mb-6">
-        <div className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 py-10 px-8 text-white shadow-lg">
-          <h1 className="text-3xl md:text-4xl font-extrabold mb-2 drop-shadow-lg">
-            Xin chào, {buyerProfile.fullName?.split(' ')[0] || 'Buyer'}!
-          </h1>
-          <p className="text-lg md:text-xl font-medium opacity-90">
-            Chào mừng bạn đến với Fsourcing. Dưới đây là tổng quan hoạt động mua sắm của bạn.
-          </p>
+      {/* Hero Section with User Profile */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Welcome Card */}
+        <div className="lg:col-span-2 relative rounded-xl overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 py-10 px-8 text-white shadow-lg h-full">
+            <h1 className="text-3xl md:text-4xl font-extrabold mb-2 drop-shadow-lg">
+              Xin chào, {buyerProfile.fullName?.split(' ')[0] || 'Buyer'}!
+            </h1>
+            <p className="text-lg md:text-xl font-medium opacity-90">
+              Chào mừng bạn đến với Fsourcing. Dưới đây là tổng quan hoạt động mua sắm của bạn.
+            </p>
+          </div>
+          <div className="absolute right-0 bottom-0 opacity-10 pointer-events-none select-none">
+            <TrendingUp className="w-40 h-40" />
+          </div>
         </div>
-        <div className="absolute right-0 bottom-0 opacity-10 pointer-events-none select-none">
-          <TrendingUp className="w-40 h-40" />
+
+        {/* User Profile Card */}
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+          <div className="flex flex-col items-center text-center">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center mb-4 shadow-lg">
+              <User className="w-10 h-10 text-white" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-1">
+              {buyerProfile.fullName || 'Buyer'}
+            </h3>
+            <p className="text-sm text-gray-500 mb-3">{buyerProfile.company || 'Company'}</p>
+            
+            <div className="w-full space-y-2 mb-4">
+              <div className="flex items-center justify-center text-xs text-gray-600 bg-gray-50 rounded-lg py-2 px-3">
+                <User className="w-3 h-3 mr-2 text-gray-400" />
+                {buyerProfile.jobTitle || 'Job Title'}
+              </div>
+              <div className="flex items-center justify-center text-xs text-gray-600 bg-gray-50 rounded-lg py-2 px-3">
+                <TrendingUp className="w-3 h-3 mr-2 text-gray-400" />
+                {buyerProfile.country || 'Country'}
+              </div>
+            </div>
+            
+            <Link
+              to="/buyer/profile"
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-2 px-4 rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all text-sm font-semibold shadow-md hover:shadow-lg"
+            >
+              Xem hồ sơ đầy đủ
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -145,12 +236,46 @@ const BuyerDashboard: React.FC = () => {
         <div className="lg:col-span-2 bg-white rounded-xl shadow-lg p-8 border border-gray-100">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-gray-900">Đơn hàng gần đây</h3>
-            <Link to="/buyer/order-detail" className="text-blue-600 hover:text-blue-700 text-sm font-semibold">
+            <Link to="/buyer/orders" className="text-blue-600 hover:text-blue-700 text-sm font-semibold">
               Xem tất cả →
             </Link>
           </div>
+          
+          {/* Status Filter Tabs */}
+          <div className="mb-6 overflow-x-auto">
+            <div className="flex space-x-2 min-w-max pb-2">
+              {orderStatusTabs.map((tab) => (
+                <button
+                  key={tab.value}
+                  onClick={() => setOrderStatusFilter(tab.value)}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
+                    orderStatusFilter === tab.value
+                      ? `bg-${tab.color}-500 text-white shadow-md`
+                      : `bg-gray-100 text-gray-600 hover:bg-${tab.color}-50 hover:text-${tab.color}-600`
+                  }`}
+                >
+                  {tab.label}
+                  {tab.count > 0 && (
+                    <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold ${
+                      orderStatusFilter === tab.value
+                        ? 'bg-white bg-opacity-30'
+                        : `bg-${tab.color}-100 text-${tab.color}-700`
+                    }`}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="space-y-4">
-            {recentOrders.length === 0 ? (
+            {loadingOrders ? (
+              <div className="text-center py-8 text-gray-500">
+                <Package className="w-12 h-12 mx-auto mb-3 text-gray-300 animate-pulse" />
+                <p>Đang tải đơn hàng...</p>
+              </div>
+            ) : recentOrders.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                 <p>Chưa có đơn hàng nào</p>
@@ -160,16 +285,29 @@ const BuyerDashboard: React.FC = () => {
               </div>
             ) : (
               recentOrders.map((order) => (
-                <div key={order.id} className="flex items-center justify-between p-5 border border-gray-200 rounded-xl bg-gray-50 hover:bg-blue-50 transition-colors">
+                <Link 
+                  key={order.id} 
+                  to={`/buyer/orders/${order.id}`}
+                  className="flex items-center justify-between p-5 border border-gray-200 rounded-xl bg-gray-50 hover:bg-blue-50 transition-colors cursor-pointer"
+                >
                   <div className="flex-1">
-                    <h4 className="font-semibold text-gray-900 text-base mb-1">{order.name}</h4>
-                    <p className="text-sm text-gray-500">Số lượng: {order.quantity} | {formatCurrency(order.price * order.quantity)}</p>
-                    <p className="text-xs text-gray-400">{order.date}</p>
+                    <h4 className="font-semibold text-gray-900 text-base mb-1">
+                      Đơn hàng #{order.id.substring(0, 8).toUpperCase()}
+                    </h4>
+                    <p className="text-sm text-gray-500">
+                      {order.items && order.items.length > 0 
+                        ? `${order.items.length} sản phẩm` 
+                        : 'Không có sản phẩm'
+                      } | {formatCurrency(order.totalAmount || 0)}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(order.createdAt).toLocaleDateString('vi-VN')}
+                    </p>
                   </div>
                   <span className={`px-3 py-1 text-xs font-bold rounded-full ${getStatusColor(order.status)}`}>
                     {getStatusText(order.status)}
                   </span>
-                </div>
+                </Link>
               ))
             )}
           </div>
@@ -215,7 +353,7 @@ const BuyerDashboard: React.FC = () => {
               <span className="text-base font-semibold text-gray-700">Giỏ hàng</span>
             </Link>
             <Link
-              to="/buyer/order-detail"
+              to="/buyer/orders"
               className="p-6 border-2 border-dashed border-orange-300 rounded-xl hover:border-orange-500 hover:bg-orange-50 text-center transition-colors shadow-sm"
             >
               <Package className="w-10 h-10 mx-auto text-orange-500 mb-2" />

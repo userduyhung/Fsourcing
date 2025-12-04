@@ -78,12 +78,7 @@ const BuyerRegister: React.FC = () => {
         role: 'buyer'
       });
 
-      console.log('==== BUYER REGISTER RESPONSE CHECK ====');
-      console.log('Response:', response);
-      console.log('Has success:', response.success);
-      console.log('Has data:', !!response.data);
-      console.log('Message:', response.message);
-      console.log('=======================================');
+      console.debug('[BuyerRegister] register response', { success: !!response.success, message: response.message, hasData: !!response.data });
 
       // Check if registration successful based on actual backend response
       // Backend returns: {success: true, message: "...", data: {id, email, role}}
@@ -164,11 +159,7 @@ const BuyerRegister: React.FC = () => {
           <p className="mt-2 text-sm text-gray-600 font-body">
             Tham gia sàn giao dịch để kết nối với nhà cung cấp toàn cầu
           </p>
-            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-            <p className="text-xs text-yellow-800 font-body">
-              ⚠️ <strong>Lưu ý:</strong> Hệ thống đang dùng in-memory database. Sau khi đăng ký thành công, hãy đăng nhập ngay lập tức. Nếu server restart, bạn cần đăng ký lại.
-            </p>
-          </div>
+          
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

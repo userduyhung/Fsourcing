@@ -1,4 +1,6 @@
 // Utility to show a global toast via a window event
+import { logger } from './logger';
+
 export type AppToastType = 'success' | 'error' | 'warning' | 'info' | 'loading';
 
 export function showAppToast(message: string, type: AppToastType = 'info', duration = 2000) {
@@ -7,8 +9,7 @@ export function showAppToast(message: string, type: AppToastType = 'info', durat
     window.dispatchEvent(ev as Event);
   } catch (e) {
     // fallback: console
-    // eslint-disable-next-line no-console
-    console.warn('Failed to dispatch app:toast event', e);
+    logger.warn('Toast', 'failed to dispatch app:toast event', e);
   }
 }
 

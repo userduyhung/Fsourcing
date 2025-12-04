@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { Search, Shield, Globe, TrendingUp, Users, BarChart3, Package, Star, ArrowRight, Mail, Phone, MapPin, ShoppingCart, MessageCircle } from 'lucide-react';
+import { Search, Shield, Globe, TrendingUp, Users, Star, Mail, Phone, MapPin, ShoppingCart } from 'lucide-react';
 import Logo from './components/Logo';
 import SearchBar from './components/SearchBar';
 import ProductShowcase from './components/ProductShowcase';
@@ -27,7 +27,6 @@ import UnifiedRegister from './pages/UnifiedRegister';
 import About from './pages/About';
 import Services from './pages/Services';
 import SuccessStories from './pages/SuccessStories';
-import ChatWidget from './components/ChatWidget';
 import CartModal from './components/CartModal';
 import ToastListener from './components/ToastListener';
 import CartPage from './pages/buyer/CartPage';
@@ -39,6 +38,7 @@ import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagement from './pages/admin/UserManagement';
 import SellerApproval from './pages/admin/SellerApproval';
+import OrderManagement from './pages/admin/OrderManagement';
 import BuyerRegister from './pages/buyer/BuyerRegister';
 import ForgotPassword from './pages/buyer/ForgotPassword';
 import ChangePassword from './pages/buyer/ChangePassword';
@@ -50,8 +50,10 @@ import OrderList from './pages/buyer/OrderList';
 import SellerOrderList from './pages/seller/OrderList';
 import SellerOrderDetail from './pages/seller/OrderDetail';
 import OrderDetail from './pages/buyer/OrderDetail';
-import PaymentSuccess from './pages/buyer/PaymentSuccess';
-import ChatPage from './pages/buyer/ChatPage';
+import PaymentSuccessPage from './pages/buyer/PaymentSuccessPage';
+import OrderConfirmationPage from './pages/buyer/OrderConfirmationPage';
+import OrderHistoryPage from './pages/buyer/OrderHistoryPage';
+import OrderTrackingPage from './pages/buyer/OrderTrackingPage';
 import { CartItem } from './types';
 import { useParams } from 'react-router-dom';
 
@@ -72,11 +74,11 @@ function App() {
   // Hàm thêm sản phẩm vào giỏ hàng
   const addToCart = (product: Omit<CartItem, 'quantity'>) => {
     setCart((prevCart) => {
-      const existing = prevCart.find((item) => item.id === product.id);
+      const existing = prevCart.find((item) => item.productId === product.productId);
       if (existing) {
         // Nếu đã có, tăng số lượng
         return prevCart.map((item) =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+          item.productId === product.productId ? { ...item, quantity: item.quantity + 1 } : item
         );
       } else {
         // Nếu chưa có, thêm mới
@@ -87,66 +89,99 @@ function App() {
 
   useEffect(() => {
     const checkUserSession = () => {
+      console.log('🔍 App.tsx: Checking user session...');
+      
       const adminToken = localStorage.getItem('adminToken');
       const buyerToken = localStorage.getItem('buyerToken');
       const sellerToken = localStorage.getItem('sellerToken');
       const userName = localStorage.getItem('userName');
       const userRole = localStorage.getItem('userRole');
       
-      // Nếu là buyer mà chưa có userName, lấy từ buyerProfile
-      if (buyerToken && (!userName || !userRole)) {
+      console.log('📊 App.tsx: Session data:', { 
+        hasBuyerToken: !!buyerToken, 
+        userName, 
+        userRole 
+      });
+      
+      // Nếu là buyer, ưu tiên lấy tên từ buyerProfile
+      if (buyerToken && userRole === 'buyer') {
         const buyerProfile = localStorage.getItem('buyerProfile');
+        console.log('🔍 App.tsx: Checking buyerProfile for buyer...');
+        
         if (buyerProfile) {
           try {
             const profile = JSON.parse(buyerProfile);
+            console.log('📦 App.tsx: Parsed buyerProfile:', profile);
+            console.log('📦 App.tsx: profile.fullName =', profile.fullName);
+            console.log('📦 App.tsx: profile.name =', profile.name);
+            
             if (profile && (profile.fullName || profile.name)) {
-              setUser({ name: profile.fullName || profile.name || 'Buyer', role: 'buyer' });
+              const displayName = profile.fullName || profile.name || 'Buyer';
+              console.log('✅ App.tsx: Setting user from buyerProfile:', displayName);
+              setUser({ name: displayName, role: 'buyer' });
               return;
+            } else {
+              console.warn('⚠️ App.tsx: buyerProfile exists but no fullName or name found');
             }
           } catch (error) {
-            console.error('Failed to parse buyerProfile:', error);
+            console.error('❌ App.tsx: Failed to parse buyerProfile:', error);
             // Fall through to normal validation
           }
+        } else {
+          console.warn('⚠️ App.tsx: No buyerProfile in localStorage');
         }
       }
       
-      // Nếu là seller mà chưa có userName, lấy từ sellerProfile
-      if (sellerToken && (!userName || !userRole)) {
+      // Nếu là seller, ưu tiên lấy tên từ sellerProfile
+      if (sellerToken && userRole === 'seller') {
         const sellerProfile = localStorage.getItem('sellerProfile');
+        console.log('🔍 App.tsx: Checking sellerProfile for seller...');
+        
         if (sellerProfile) {
           try {
             const profile = JSON.parse(sellerProfile);
+            console.log('📦 App.tsx: Parsed sellerProfile:', profile);
+            
             // Seller profile có thể có companyName hoặc contactName hoặc fullName
             if (profile && (profile.companyName || profile.contactName || profile.fullName || profile.name)) {
               const displayName = profile.companyName || profile.contactName || profile.fullName || profile.name || 'Seller';
+              console.log('✅ App.tsx: Setting user from sellerProfile:', displayName);
               setUser({ name: displayName, role: 'seller' });
               return;
             }
           } catch (error) {
-            console.error('Failed to parse sellerProfile:', error);
+            console.error('❌ App.tsx: Failed to parse sellerProfile:', error);
             // Fall through to normal validation
           }
         }
       }
       
       if ((adminToken || buyerToken || sellerToken) && userName && userRole) {
+        console.log('✅ App.tsx: Setting user from userName:', userName);
         setUser({ name: userName, role: userRole });
       } else {
+        console.log('❌ App.tsx: No valid session, clearing user');
         setUser(null);
       }
     };
 
+    console.log('🚀 App.tsx: Setting up user session listeners...');
     checkUserSession();
     
     // Listen for storage changes (when user logs in from another tab)
     window.addEventListener('storage', checkUserSession);
     
     // Listen for login events
-    window.addEventListener('userLoggedIn', checkUserSession);
+    const handleUserLoggedIn = () => {
+      console.log('📢 App.tsx: Received userLoggedIn event!');
+      checkUserSession();
+    };
+    
+    window.addEventListener('userLoggedIn', handleUserLoggedIn);
     
     return () => {
       window.removeEventListener('storage', checkUserSession);
-      window.removeEventListener('userLoggedIn', checkUserSession);
+      window.removeEventListener('userLoggedIn', handleUserLoggedIn);
     };
   }, []);
 
@@ -306,57 +341,6 @@ function App() {
                 </div>
               </section>
               
-              {/* Flash Sale Section - CHỈ cho Buyer */}
-              {user && user.role === 'buyer' && (
-                <section className="bg-white py-12">
-                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 rounded-2xl p-8 shadow-2xl">
-                      <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center space-x-4">
-                          <div className="bg-white rounded-full p-3 animate-spin-slow">
-                            <TrendingUp className="h-8 w-8 text-red-500" />
-                          </div>
-                          <div>
-                            <h2 className="text-3xl font-bold text-white">⚡ FLASH SALE TRONG NGÀY</h2>
-                            <p className="text-white/90 font-medium">Ưu đãi kết thúc sau: <span className="font-bold text-yellow-300">23:59:59</span></p>
-                          </div>
-                        </div>
-                        <Link to="/products" className="bg-white text-red-600 px-8 py-3 rounded-full font-bold hover:shadow-lg transform hover:scale-105 transition-all">
-                          Xem tất cả →
-                        </Link>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {[
-                          { name: 'Bia Tiger', discount: '25%', oldPrice: 12000, newPrice: 9000, image: 'https://bizweb.dktcdn.net/100/446/647/products/bia-tiger-sleek-5-abv-lon-330ml-281124-112850-1732768166826.jpg?v=1732768294907' },
-                          { name: 'Bánh Choco-Pie', discount: '30%', oldPrice: 60000, newPrice: 42000, image: 'https://static.vinshop.vn/cdn-cgi/image/cdnCode=PRIMARY,fit=scale-down,w=820,h=820,quality=80,f=auto/media/sys_b2bpcm/images/h2e/h00/1523/a6fc501f-bd61-42d1-9e63-464dae5e0d54.png' },
-                          { name: 'Cà phê G7', discount: '20%', oldPrice: 120000, newPrice: 96000, image: 'https://res.cloudinary.com/dcworyvtj/image/upload/v1764063288/c%C3%A0_ph%C3%AA_g7_t3k7j6.avif' }
-                        ].map((item, idx) => (
-                          <div key={idx} className="bg-white rounded-xl p-4 hover:shadow-2xl transform hover:scale-105 transition-all">
-                            <div className="relative">
-                              <img src={item.image} alt={item.name} className="w-full h-48 object-cover rounded-lg mb-3" />
-                              <div className="absolute top-2 right-2 bg-red-600 text-white px-3 py-1 rounded-full font-bold text-sm animate-pulse">
-                                -{item.discount}
-                              </div>
-                            </div>
-                            <h3 className="font-bold text-lg text-gray-900 mb-2">{item.name}</h3>
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-gray-400 line-through text-sm">{Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.oldPrice)}</p>
-                                <p className="text-red-600 font-bold text-xl">{Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.newPrice)}</p>
-                              </div>
-                              <Link to="/products" className="bg-gradient-to-r from-red-600 to-orange-600 text-white px-4 py-2 rounded-lg font-bold hover:shadow-lg">
-                                Mua
-                              </Link>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              )}
-              
               <ProductShowcase addToCart={addToCart} />
               
               {/* Các section chỉ hiển thị khi chưa đăng nhập Buyer */}
@@ -509,28 +493,39 @@ function App() {
           } /> */}
           <Route path="/buyer/rfq-list" element={
             <BuyerProtectedRoute>
-              <OrderList />
+              <OrderHistoryPage />
             </BuyerProtectedRoute>
           } />
-          <Route path="/buyer/order-detail" element={
+          <Route path="/buyer/order-confirmation" element={
             <BuyerProtectedRoute>
-              <OrderDetail />
+              <OrderConfirmationPage />
             </BuyerProtectedRoute>
           } />
           <Route path="/buyer/orders" element={
             <BuyerProtectedRoute>
+              <OrderList />
+            </BuyerProtectedRoute>
+          } />
+          <Route path="/buyer/orders/:id" element={
+            <BuyerProtectedRoute>
               <OrderDetail />
+            </BuyerProtectedRoute>
+          } />
+          <Route path="/buyer/orders/:id/tracking" element={
+            <BuyerProtectedRoute>
+              <OrderTrackingPage />
             </BuyerProtectedRoute>
           } />
           <Route path="/buyer/seller-detail/:id" element={<SellerDetail />} />
           <Route path="/seller-detail/:id" element={<SellerDetail />} />
           <Route path="/buyer/payment-success" element={
             <BuyerProtectedRoute>
-              <PaymentSuccess />
+              <PaymentSuccessPage />
             </BuyerProtectedRoute>
           } />
           <Route path="/admin/*" element={<AdminLayout />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/orders" element={<OrderManagement />} />
           <Route path="/admin/user-management" element={<UserManagement />} />
           <Route path="/admin/seller-approval" element={<SellerApproval />} />
           <Route path="/cart" element={

@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { logger } from '../../utils/logger';
+import authService from '../../services/authService';
+import { buyerService } from '../../services/buyerService';
 
 const BuyerLogin: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -30,35 +33,145 @@ const BuyerLogin: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    logger.info('BuyerLogin', '🔑 LOGIN: Form submitted', { email: formData.email });
     
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      logger.warn('BuyerLogin', '❌ VALIDATION: Form validation failed');
+      return;
+    }
 
+    logger.info('BuyerLogin', '✅ VALIDATION: Form validation passed');
     setIsLoading(true);
     
-    // Mock login - check demo credentials
-    setTimeout(() => {
-      if (formData.email === 'buyer@demo.com' && formData.password === 'demo123') {
-        localStorage.setItem('buyerToken', 'mock-buyer-token');
-        localStorage.setItem('userName', 'John Buyer');
-        localStorage.setItem('userRole', 'buyer');
-        localStorage.setItem('buyerProfile', JSON.stringify({
-          id: 1,
-          fullName: 'John Buyer',
-          company: 'ABC Manufacturing Co',
-          email: 'buyer@demo.com',
-          phone: '+1-555-0123',
-          country: 'Vietnam',
-          joinDate: '2024-01-15T00:00:00Z'
-        }));
+    try {
+      // Call real API
+      logger.info('BuyerLogin', '📡 Calling login API...');
+      
+      const response = await authService.login({
+        email: formData.email,
+        password: formData.password
+      });
+
+      logger.info('BuyerLogin', '📦 Login API response received:', {
+        hasToken: !!response.token,
+        hasUser: !!response.user,
+        userRole: response.user?.role
+      });
+
+      if (response.token && response.user) {
+        // Check if user is buyer
+        const role = response.user.role?.toLowerCase();
+        logger.info('BuyerLogin', '🔍 Checking role:', role);
         
+        if (role !== 'buyer') {
+          logger.warn('BuyerLogin', '❌ Role mismatch:', role);
+          setErrors({ general: 'This account is not a buyer account. Please use the correct login page.' });
+          setIsLoading(false);
+          return;
+        }
+
+        logger.info('BuyerLogin', '✅ AUTH SUCCESS: Buyer logged in', { userId: response.user.id, role });
+        
+        // Save token FIRST to localStorage
+        localStorage.setItem('buyerToken', response.token);
+        localStorage.setItem('userRole', 'buyer');
+        
+        logger.info('BuyerLogin', '💾 Token saved to localStorage');
+        
+        // Small delay to ensure localStorage write is complete
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        // Now fetch full profile from API to get accurate name
+        logger.info('BuyerLogin', '🔄 Attempting to fetch buyer profile from API...');
+        
+        try {
+          const profile = await buyerService.getProfile();
+          
+          logger.info('BuyerLogin', '📦 API PROFILE RESPONSE:', profile);
+          logger.info('BuyerLogin', '📦 profile.name:', profile.name);
+          logger.info('BuyerLogin', '📦 response.user.fullName:', response.user.fullName);
+          
+          // Determine fullName: prioritize profile.name, but don't fallback to email
+          let fullNameToSave = '';
+          if (profile.name && profile.name.trim() !== '') {
+            fullNameToSave = profile.name.trim();
+          } else if (response.user.fullName && response.user.fullName.trim() !== '' && !response.user.fullName.includes('@')) {
+            // Only use response.user.fullName if it's not an email
+            fullNameToSave = response.user.fullName.trim();
+          }
+          
+          logger.info('BuyerLogin', '💾 Determined fullName to save:', fullNameToSave || '(empty - user needs to set name)');
+          
+          // Save to localStorage - use actual name or empty string (not email)
+          localStorage.setItem('userName', fullNameToSave || response.user.email || 'Buyer');
+          localStorage.setItem('buyerProfile', JSON.stringify({
+            id: response.user.id,
+            fullName: fullNameToSave,
+            company: profile.companyName || response.user.company || '',
+            email: response.user.email,
+            phone: profile.phone || response.user.phone || '',
+            country: profile.country || response.user.country || '',
+            joinDate: response.user.joinDate
+          }));
+          
+          logger.info('BuyerLogin', '💾 STORAGE: Profile saved to localStorage', {
+            fullName: fullNameToSave || '(empty)',
+            email: response.user.email,
+            company: profile.companyName || response.user.company || ''
+          });
+        } catch (profileError) {
+          logger.error('BuyerLogin', '❌ PROFILE FETCH ERROR:', profileError);
+          logger.error('BuyerLogin', '❌ Error details:', {
+            message: (profileError as any)?.message,
+            response: (profileError as any)?.response,
+            status: (profileError as any)?.status
+          });
+          logger.warn('BuyerLogin', '⚠️ Failed to fetch profile, using login response data', profileError);
+          
+          // Fallback to login response if profile fetch fails
+          // DO NOT use email as fullName
+          const fallbackName = (response.user.fullName && !response.user.fullName.includes('@')) 
+            ? response.user.fullName 
+            : '';
+          
+          localStorage.setItem('userName', fallbackName || response.user.email || 'Buyer');
+          localStorage.setItem('buyerProfile', JSON.stringify({
+            id: response.user.id,
+            fullName: fallbackName,
+            company: response.user.company || '',
+            email: response.user.email,
+            phone: response.user.phone || '',
+            country: response.user.country || '',
+            joinDate: response.user.joinDate
+          }));
+          
+          logger.info('BuyerLogin', '💾 FALLBACK: Saved login data to localStorage (profile fetch failed)');
+        }
+        
+        logger.info('BuyerLogin', '💾 STORAGE: Token and profile saved to localStorage');
+        
+        // Small delay to ensure localStorage is fully written
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Dispatch event to update App.tsx and UserMenu
         window.dispatchEvent(new Event('userLoggedIn'));
-        setIsLoading(false);
+        logger.info('BuyerLogin', '📢 EVENT: userLoggedIn dispatched');
+        
+        // Small delay to let App.tsx process the event
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        logger.info('BuyerLogin', '➡️ REDIRECT: Navigating to /buyer/dashboard');
         navigate('/buyer/dashboard');
       } else {
-        setIsLoading(false);
-        setErrors({ general: 'Invalid email or password' });
+        logger.warn('BuyerLogin', '❌ AUTH FAILED: No token or user in response');
+        setErrors({ general: 'Invalid response from server' });
       }
-    }, 1000);
+    } catch (error: any) {
+      logger.error('BuyerLogin', '❌ AUTH ERROR', error);
+      setErrors({ general: error.message || 'Failed to login. Please check your credentials and try again.' });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -175,9 +288,9 @@ const BuyerLogin: React.FC = () => {
             </p>
             
             <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-              <p className="text-xs text-blue-800 font-semibold">Demo Credentials:</p>
-              <p className="text-xs text-blue-700">Email: buyer@demo.com</p>
-              <p className="text-xs text-blue-700">Password: demo123</p>
+              <p className="text-xs text-blue-800 font-semibold">Note:</p>
+              <p className="text-xs text-blue-700">You need to register as a Buyer first to login.</p>
+              <p className="text-xs text-blue-700">Use the registration link above to create your account.</p>
             </div>
           </div>
         </form>

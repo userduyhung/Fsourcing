@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../../utils/logger';
 
 interface Product {
   id: string;
@@ -21,11 +22,11 @@ const ProductApproval: React.FC = () => {
         if (Array.isArray(parsed)) {
           setProducts(parsed);
         } else {
-          console.error('Parsed sellerProducts is not an array:', parsed);
+          logger.error('ProductApproval', 'parsed sellerProducts is not an array', { type: typeof parsed });
           setProducts([]);
         }
       } catch (err) {
-        console.error('Error parsing sellerProducts from localStorage:', err);
+        logger.error('ProductApproval', 'error parsing sellerProducts from localStorage', err);
         setProducts([]);
       }
     } else {
@@ -49,20 +50,25 @@ const ProductApproval: React.FC = () => {
 
   const handleApprove = async (id: string) => {
     try {
+      logger.debug('ProductApproval', 'approving product', { productId: id });
       const res = await fetch(`/api/admin/products/${id}/approve`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
       });
-      if (!res.ok) throw new Error('Không thể duyệt sản phẩm.');
+      if (!res.ok) {
+        logger.error('ProductApproval', 'approval API failed', { productId: id, status: res.status });
+        throw new Error('Không thể duyệt sản phẩm.');
+      }
       // Only update state if backend succeeded
       const updated = products.map(p =>
         p.id === id ? { ...p, approved: true } : p
       );
       setProducts(updated);
+      logger.info('ProductApproval', 'product approved successfully', { productId: id });
     } catch (err) {
-      console.error('Lỗi duyệt sản phẩm:', err);
-      alert('Duyệt sản phẩm thất bại. Vui lòng thử lại hoặc kiểm tra kết nối.');
+      logger.error('ProductApproval', 'error approving product', { productId: id, error: err });
+      alert('❌ Duyệt sản phẩm thất bại. Vui lòng thử lại hoặc kiểm tra kết nối.');
     }
   };
 

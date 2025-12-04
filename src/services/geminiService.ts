@@ -108,7 +108,7 @@ export async function sendMessageToGemini(userMessage: string): Promise<{ succes
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('Gemini API Error:', errorData);
+      logger.error('GeminiService', 'API error', { status: response.status, error: errorData });
       
       // Xử lý các lỗi phổ biến
       if (response.status === 400) {
@@ -137,7 +137,7 @@ export async function sendMessageToGemini(userMessage: string): Promise<{ succes
     };
 
   } catch (error) {
-    console.error('Error calling Gemini API:', error);
+    logger.error('GeminiService', 'error calling Gemini API', error);
     return {
       success: false,
       message: 'Đã xảy ra lỗi kết nối. Vui lòng thử lại sau.'

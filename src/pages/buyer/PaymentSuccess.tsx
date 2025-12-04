@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { CheckCircle, Package, Clock, MapPin, Mail } from 'lucide-react';
 import emailService from '../../services/emailService';
 import { showAppToast } from '../../utils/toast';
+import { logger } from '../../utils/logger';
 
 interface PaymentSuccessProps {
   orderId?: string;
@@ -39,7 +40,7 @@ const PaymentSuccess: React.FC<PaymentSuccessProps> = ({ orderId, amount, transa
     const sendEmailConfirmation = async () => {
       // Kiểm tra đã gửi chưa bằng useRef (persistent across renders)
       if (emailSentRef.current) {
-        console.log('⏭️ Email already sent, skipping...');
+        logger.debug('PaymentSuccess', 'email already sent - skipping');
         return;
       }
 
@@ -50,7 +51,7 @@ const PaymentSuccess: React.FC<PaymentSuccessProps> = ({ orderId, amount, transa
         // Lấy thông tin buyer từ localStorage
         const buyerProfileStr = localStorage.getItem('buyerProfile');
         if (!buyerProfileStr) {
-          console.warn('Không tìm thấy thông tin buyer trong localStorage');
+          logger.warn('PaymentSuccess', 'buyerProfile not found in localStorage');
           return;
         }
 
@@ -58,7 +59,7 @@ const PaymentSuccess: React.FC<PaymentSuccessProps> = ({ orderId, amount, transa
         const { email, name, address } = buyerProfile;
 
         if (!email) {
-          console.warn('Không có email trong buyerProfile');
+          logger.warn('PaymentSuccess', 'no email in buyerProfile');
           return;
         }
 
@@ -80,10 +81,10 @@ const PaymentSuccess: React.FC<PaymentSuccessProps> = ({ orderId, amount, transa
         existingOrders.unshift(newOrder);
         // Lưu lại vào localStorage
         localStorage.setItem('orders', JSON.stringify(existingOrders));
-        console.log('💾 Order saved to localStorage:', newOrder);
+        logger.debug('PaymentSuccess', 'order saved to localStorage', { orderId: newOrder.orderId });
 
-        // SỬ DỤNG CART ITEMS TỪ LOCATION.STATE (đã được truyền từ CheckoutPage)
-        console.log('📦 Cart items from checkout:', cartItems);
+        // SỚ DỤNG CART ITEMS TỪ LOCATION.STATE (đã được truyền từ CheckoutPage)
+        logger.debug('PaymentSuccess', 'cart items from checkout', { itemCount: cartItems.length });
 
         // Format cart items cho email (bao gồm cả hình ảnh)
         const orderItems = cartItems.map((item: any) => ({
@@ -94,7 +95,7 @@ const PaymentSuccess: React.FC<PaymentSuccessProps> = ({ orderId, amount, transa
           imageUrl: item.image || 'https://via.placeholder.com/150?text=No+Image'  // Ảnh sản phẩm
         }));
 
-        console.log('📧 Sending email for order:', demoOrderId, 'with', orderItems.length, 'items');
+        logger.debug('PaymentSuccess', 'sending email for order', { orderId: demoOrderId, itemCount: orderItems.length });
 
         // Gửi email xác nhận
         const result = await emailService.sendOrderConfirmation({
@@ -112,15 +113,15 @@ const PaymentSuccess: React.FC<PaymentSuccessProps> = ({ orderId, amount, transa
         if (result.success) {
           setEmailSent(true);
           showAppToast('✅ Email xác nhận đã được gửi đến ' + email, 'success');
-          console.log('✅ Email confirmation sent successfully');
+          logger.info('PaymentSuccess', 'email sent successfully', { to: email });
         } else {
-          console.warn('⚠️ Email sending failed:', result.message);
+          logger.warn('PaymentSuccess', 'email sending failed', { message: result.message });
           if (!emailService.isConfigured()) {
             showAppToast('⚠️ EmailJS chưa được cấu hình. Vui lòng kiểm tra emailService.ts', 'warning');
           }
         }
       } catch (error) {
-        console.error('❌ Error sending email:', error);
+        logger.error('PaymentSuccess', 'error sending email', error);
       }
     };
 

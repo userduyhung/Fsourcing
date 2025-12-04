@@ -11,6 +11,7 @@ interface UserMenuProps {
 const UserMenu: React.FC<UserMenuProps> = ({ userName, userRole }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [displayName, setDisplayName] = useState(userName);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -24,6 +25,50 @@ const UserMenu: React.FC<UserMenuProps> = ({ userName, userRole }) => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Determine display name prefering profile fields for sellers/buyers
+  const getDisplayName = () => {
+    try {
+      if (userRole === 'seller') {
+        const raw = localStorage.getItem('sellerProfile');
+        if (raw) {
+          const p = JSON.parse(raw);
+          return p.companyName || p.legalRepresentative || userName;
+        }
+      }
+      if (userRole === 'buyer') {
+        const raw = localStorage.getItem('buyerProfile');
+        if (raw) {
+          const p = JSON.parse(raw);
+          return p.fullName || p.name || userName;
+        }
+      }
+    } catch (e) {
+      // ignore and fallback
+    }
+    return userName;
+  };
+
+  // Listen for profile updates and refresh display name
+  useEffect(() => {
+    const updateDisplayName = () => {
+      const name = getDisplayName();
+      console.log('🔄 UserMenu: Updating display name:', name, 'Role:', userRole);
+      setDisplayName(name);
+    };
+
+    // Update on mount
+    updateDisplayName();
+
+    // Listen for profile update events
+    window.addEventListener('userProfileUpdated', updateDisplayName);
+    window.addEventListener('userLoggedIn', updateDisplayName);
+
+    return () => {
+      window.removeEventListener('userProfileUpdated', updateDisplayName);
+      window.removeEventListener('userLoggedIn', updateDisplayName);
+    };
+  }, [userRole, userName, getDisplayName]);
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -52,11 +97,16 @@ const UserMenu: React.FC<UserMenuProps> = ({ userName, userRole }) => {
   };
 
   const handleLogout = () => {
+    // Remove all auth tokens
     localStorage.removeItem('adminToken');
     localStorage.removeItem('buyerToken');
     localStorage.removeItem('sellerToken');
+    localStorage.removeItem('token');
+    localStorage.removeItem('authToken');
+    // Remove role and user info
     localStorage.removeItem('userRole');
     localStorage.removeItem('userName');
+    localStorage.removeItem('role');
     setShowLogoutModal(false);
     navigate('/');
     window.location.reload();
@@ -82,29 +132,6 @@ const UserMenu: React.FC<UserMenuProps> = ({ userName, userRole }) => {
     }
   };
 
-  // Determine display name prefering profile fields for sellers/buyers
-  const getDisplayName = () => {
-    try {
-      if (userRole === 'seller') {
-        const raw = localStorage.getItem('sellerProfile');
-        if (raw) {
-          const p = JSON.parse(raw);
-          return p.contactName || p.fullName || p.companyName || p.company || userName;
-        }
-      }
-      if (userRole === 'buyer') {
-        const raw = localStorage.getItem('buyerProfile');
-        if (raw) {
-          const p = JSON.parse(raw);
-          return p.fullName || p.name || userName;
-        }
-      }
-    } catch (e) {
-      // ignore and fallback
-    }
-    return userName;
-  };
-
   return (
     <>
       <div className="relative" ref={menuRef}>
@@ -116,7 +143,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ userName, userRole }) => {
             <User className="w-5 h-5 text-blue-600" />
           </div>
           <div className="hidden md:block text-left">
-            <div className="text-sm font-medium font-sans">{getDisplayName()}</div>
+            <div className="text-sm font-medium font-sans">{displayName}</div>
             <div className={`text-xs px-2 py-0.5 rounded-full inline-block ${getRoleBadgeColor(userRole)} font-sans`}>
               {getRoleLabel(userRole)}
             </div>
@@ -126,7 +153,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ userName, userRole }) => {
         {isOpen && (
           <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border py-1 z-50 font-sans">
             <div className="px-4 py-2 border-b">
-              <div className="text-sm font-medium text-gray-900 font-sans">{getDisplayName()}</div>
+              <div className="text-sm font-medium text-gray-900 font-sans">{displayName}</div>
               <div className={`text-xs px-2 py-0.5 rounded-full inline-block mt-1 ${getRoleBadgeColor(userRole)} font-sans`}>
                 {getRoleLabel(userRole)}
               </div>
@@ -152,7 +179,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ userName, userRole }) => {
         isOpen={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
         onConfirm={handleLogout}
-        userName={getDisplayName()}
+        userName={displayName}
       />
     </>
   );

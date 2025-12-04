@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield } from 'lucide-react';
+import authService from '../../services/authService';
+import { logger } from '../../utils/logger';
 
 const AdminLogin: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -10,31 +12,62 @@ const AdminLogin: React.FC = () => {
   const navigate = useNavigate();
 
   const handleDemoClick = () => {
-    setEmail('admin@fsourcing.com');
-    setPassword('admin123');
+    setEmail('adminb2b@marketplace.com');
+    setPassword('123456');
     setError('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
     if (!email.trim() || !password) {
       setError('Vui lòng nhập đầy đủ email và mật khẩu.');
       return;
     }
+    
     setIsLoading(true);
-    setTimeout(() => {
-      if (email === 'admin@fsourcing.com' && password === 'admin123') {
-        localStorage.setItem('adminToken', 'mock-admin-token');
-        localStorage.setItem('userName', 'Admin');
-        localStorage.setItem('userRole', 'admin');
-        window.dispatchEvent(new Event('userLoggedIn'));
-        navigate('/admin/dashboard');
-      } else {
-        setError('Email hoặc mật khẩu không đúng.');
+    
+    try {
+      logger.info('AdminLogin', 'attempting admin login', { email });
+      
+      const response = await authService.login({ email, password });
+      
+      logger.debug('AdminLogin', 'login response', { 
+        hasToken: !!response.token, 
+        role: response.user?.role 
+      });
+      
+      // Check if user is admin
+      if (response.user?.role?.toLowerCase() !== 'admin') {
+        setError('Tài khoản này không có quyền quản trị viên.');
+        setIsLoading(false);
+        return;
       }
+      
+      // Store auth data
+      if (response.token) {
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('adminToken', response.token);
+      }
+      
+      if (response.user) {
+        localStorage.setItem('user', JSON.stringify(response.user));
+        localStorage.setItem('userName', response.user.fullName || response.user.email || 'Admin');
+        localStorage.setItem('userId', response.user.id);
+        localStorage.setItem('userRole', 'admin');
+      }
+      
+      window.dispatchEvent(new Event('userLoggedIn'));
+      logger.info('AdminLogin', 'admin login successful, navigating to dashboard');
+      navigate('/admin/dashboard');
+      
+    } catch (err: any) {
+      logger.error('AdminLogin', 'login failed', err);
+      setError(err.message || 'Email hoặc mật khẩu không đúng.');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -84,7 +117,7 @@ const AdminLogin: React.FC = () => {
             className="bg-white p-2 rounded border text-xs cursor-pointer hover:bg-blue-50 hover:border-blue-400 transition-colors"
             title="Click để tự động điền thông tin"
           >
-            <span className="font-semibold text-blue-800">admin@fsourcing.com / admin123</span>
+            <span className="font-semibold text-blue-800">adminb2b@marketplace.com / 123456</span>
           </div>
           <p className="text-xs text-gray-600 mt-2 italic">💡 Click vào ô trên để tự động điền thông tin</p>
         </div>

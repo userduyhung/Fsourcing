@@ -6,14 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "gen:api": "npx openapi-typescript ./openapi.json --output src/services/api-types.ts"
+    "gen-api": "swagger-typescript-api -p http://localhost:5000/swagger/v1/swagger.json -o ./src/api -n myApi.ts --axios"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
     "@supabase/supabase-js": "^2.57.4",
-    "axios": "^1.4.0",
+    "@types/crypto-js": "^4.2.2",
+    "axios": "^1.13.2",
+    "crypto-js": "^4.2.0",
     "lucide-react": "^0.344.0",
     "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
@@ -34,6 +34,7 @@
     "globals": "^15.9.0",
     "openapi-typescript": "^7.4.0",
     "postcss": "^8.4.35",
+    "swagger-typescript-api": "^13.2.16",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.3.0",

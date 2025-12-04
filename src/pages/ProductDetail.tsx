@@ -4,14 +4,7 @@ import showAppToast from '../utils/toast';
 import { productsApi } from '../services/apiClient';
 import { addCartItem } from '../services/cartService';
 import { validateProduct, validateAuthentication } from '../utils/purchaseValidation';
-
-// Define CartItem type locally since it's not exported from App
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  image?: string;
-}
+import { CartItem } from '../types';
 
 interface ProductDetailProps {
   addToCart: (product: Omit<CartItem, 'quantity'>) => void;
@@ -116,12 +109,13 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ addToCart }) => {
       });
 
       // Also update local state for backward compatibility
-      // addToCart({
-      //   id: productId,
-      //   name: product.name ?? 'Sản phẩm',
-      //   price: priceNumber,
-      //   image: mainImage ?? product.image
-      // });
+      addToCart({
+        id: productId,
+        productId: productId,
+        name: product.name ?? 'Sản phẩm',
+        price: priceNumber,
+        image: mainImage ?? product.image ?? PLACEHOLDER
+      });
 
       setShowAdded(true);
       showAppToast(`Đã thêm ${quantity} sản phẩm vào giỏ hàng`, 'success', 1200);

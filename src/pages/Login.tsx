@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import authService from '../services/authService';
+import { logger } from '../utils/logger';
 // DebugLogger removed - use console.log for debugging
 import Toast from '../components/Toast';
 import { useApiToast } from '../hooks/useApiToast';
@@ -11,10 +12,7 @@ const Login: React.FC = () => {
   const registeredEmail = sessionStorage.getItem('registeredEmail') || '';
   const registeredPassword = sessionStorage.getItem('registeredPassword') || '';
 
-  console.log('==== LOGIN COMPONENT MOUNTED ====');
-  console.log('Registered email from session:', registeredEmail);
-  console.log('Registered password from session:', registeredPassword ? '***' : 'none');
-  console.log('=================================');
+  logger.debug('Login', 'component mounted', { hasRegisteredEmail: !!registeredEmail });
 
   const [email, setEmail] = useState(registeredEmail);
   const [password, setPassword] = useState(registeredPassword);
@@ -45,33 +43,25 @@ const Login: React.FC = () => {
 
   // Clear session storage and error state after auto-fill
   React.useEffect(() => {
-    console.log('==== useEffect RUNNING ====');
-
     // Only clear on mount, not on every render
     const savedEmail = sessionStorage.getItem('registeredEmail');
     const savedPassword = sessionStorage.getItem('registeredPassword');
 
-    console.log('Saved email:', savedEmail);
-    console.log('Saved password:', savedPassword ? '***' : 'none');
+    logger.debug('Login', 'useEffect mount', { savedEmailPresent: !!savedEmail, savedPasswordPresent: !!savedPassword });
 
     if (savedEmail || savedPassword) {
-      console.log('Clearing sessionStorage...');
       sessionStorage.removeItem('registeredEmail');
       sessionStorage.removeItem('registeredPassword');
       setError(''); // Clear any previous error
-      console.log('SessionStorage cleared, error state cleared');
+      logger.debug('Login', 'cleared sessionStorage and reset error state');
     }
-    console.log('==========================');
   }, []); // Run only once on mount
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    console.log('==== LOGIN FORM SUBMIT ====');
-    console.log('Email from form:', email);
-    console.log('Password from form:', password);
-    console.log('==========================');
+    logger.debug('Login', 'form submit', { emailProvided: !!email });
 
     if (!email.trim() || !password) {
       setError('Please enter both email and password.');
@@ -82,15 +72,9 @@ const Login: React.FC = () => {
     showLoading('Đang đăng nhập...');
 
     try {
-      console.log('==== CALLING AUTH SERVICE ====');
-      // Call real API
+      logger.debug('Login', 'calling authService.login');
       const response = await authService.login({ email, password });
-
-      console.log('==== LOGIN RESPONSE RECEIVED ====');
-      console.log('Full response:', response);
-      console.log('Has user:', !!response.user);
-      console.log('Has token:', !!response.token);
-      console.log('=================================');
+      logger.debug('Login', 'authService response', { hasUser: !!response.user, hasToken: !!response.token });
 
       // Store user data based on role
       if (response.user) {
@@ -98,11 +82,7 @@ const Login: React.FC = () => {
         const role = (response.user.role || '').toLowerCase();
         const token = response.token || 'auth-token';
 
-        console.log('==== PROCESSING USER DATA ====');
-        console.log('User role:', role);
-        console.log('Token:', token);
-        console.log('User object:', response.user);
-        console.log('==============================');
+        logger.debug('Login', 'processing user', { role, userId: response.user?.id });
 
         showSuccess('Đăng nhập thành công!');
 
@@ -110,17 +90,16 @@ const Login: React.FC = () => {
         localStorage.setItem('userName', response.user.fullName || response.user.email);
         localStorage.setItem('userRole', role ?? '');
 
-        console.log('Stored userName:', response.user.fullName || response.user.email);
-        console.log('Stored userRole:', role);
+        logger.debug('Login', 'stored user info', { userName: response.user.fullName || response.user.email, role });
 
         // Store role-specific token and profile
         if (role === 'admin') {
-          console.log('Redirecting to admin dashboard...');
+          logger.info('Login', 'redirecting to admin dashboard');
           localStorage.setItem('adminToken', token);
           window.dispatchEvent(new Event('userLoggedIn'));
           setTimeout(() => navigate('/admin/dashboard'), 1000);
         } else if (role === 'buyer') {
-          console.log('Redirecting to home for buyer...');
+          logger.info('Login', 'redirecting to home for buyer');
           const buyerProfile = {
             id: response.user.id,
             fullName: response.user.fullName,
@@ -130,13 +109,13 @@ const Login: React.FC = () => {
             country: response.user.country,
             joinDate: response.user.joinDate || new Date().toISOString()
           };
-          console.log('Buyer profile:', buyerProfile);
+          logger.debug('Login', 'buyer profile prepared', { buyerId: buyerProfile.id });
           localStorage.setItem('buyerToken', token);
           localStorage.setItem('buyerProfile', JSON.stringify(buyerProfile));
           window.dispatchEvent(new Event('userLoggedIn'));
           setTimeout(() => navigateAfterLogin(fromLocation), 1000);
         } else if (role === 'seller') {
-          console.log('Redirecting to seller dashboard...');
+          logger.info('Login', 'redirecting to seller dashboard');
           const sellerProfile = {
             id: response.user.id,
             companyName: response.user.company || response.user.fullName,
@@ -147,40 +126,36 @@ const Login: React.FC = () => {
             country: response.user.country,
             joinDate: response.user.joinDate || new Date().toISOString()
           };
-          console.log('Seller profile:', sellerProfile);
+          logger.debug('Login', 'seller profile prepared', { sellerId: sellerProfile.id });
           localStorage.setItem('sellerToken', token);
           localStorage.setItem('sellerProfile', JSON.stringify(sellerProfile));
           window.dispatchEvent(new Event('userLoggedIn'));
           // Redirect sellers directly to their dashboard
           setTimeout(() => navigate('/seller/dashboard'), 600);
         } else {
-          console.error('Unknown role:', role);
+          logger.error('Login', 'unknown role', { role });
           showError('Unknown user role.');
           setError('Unknown user role.');
         }
       } else {
-        console.error('No user in response!');
+        logger.error('Login', 'no user in response');
         showError('Invalid response from server.');
         setError('Invalid response from server.');
       }
     } catch (err) {
-      console.error('==== LOGIN ERROR CAUGHT ====');
-      console.error('Error:', err);
-      console.error('Error type:', typeof err);
-      console.error('============================');
+      logger.error('Login', 'error caught', err);
 
       if (err instanceof Error) {
-        console.error('Error message:', err.message);
-        console.error('Error stack:', err.stack);
+        logger.error('Login', 'error details', { message: err.message });
         showError(err.message);
         setError(err.message);
       } else {
-        console.error('Unknown error type:', err);
+        logger.error('Login', 'unknown error type', err);
         showError('An error occurred. Please try again.');
         setError('An error occurred. Please try again.');
       }
     } finally {
-      console.log('Login process finished, isLoading set to false');
+      logger.debug('Login', 'finished process, isLoading=false');
       setIsLoading(false);
     }
   };
@@ -284,12 +259,7 @@ const Login: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading}
-            onClick={(e) => {
-              console.log('==== SIGN IN BUTTON CLICKED ====');
-              console.log('Event:', e);
-              console.log('isLoading:', isLoading);
-              console.log('================================');
-            }}
+            onClick={(e) => logger.debug('Login', 'sign-in clicked', { isLoading })}
             className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-sans"
           >
             {isLoading ? 'Signing in...' : 'Sign in'}

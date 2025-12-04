@@ -1,34 +1,77 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, User } from 'lucide-react';
+import { Mail, Lock, User, Building2, FileText, Globe } from 'lucide-react';
 import authService from '../../services/authService';
 import Toast from '../../components/Toast';
 import { useApiToast } from '../../hooks/useApiToast';
+import { logger } from '../../utils/logger';
 
 const SellerRegister: React.FC = () => {
-  const [company, setCompany] = useState('');
-  const [contactName, setContactName] = useState('');
+  // Step 1: Account Registration
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  
+  // Step 2: Seller Profile (Required fields)
+  const [companyName, setCompanyName] = useState('');
+  const [legalRepresentative, setLegalRepresentative] = useState('');
+  const [taxId, setTaxId] = useState('');
+  const [country, setCountry] = useState('');
+  
+  // Step 2: Seller Profile (Optional fields)
+  const [industry, setIndustry] = useState('');
+  const [description, setDescription] = useState('');
+  const [website, setWebsite] = useState('');
+  const [city, setCity] = useState('');
+  
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const { toast, showLoading, showSuccess, showError, hideToast } = useApiToast();
   const navigate = useNavigate();
 
+  const countries = [
+    'Vietnam', 'United States', 'China', 'Japan', 'South Korea', 'Singapore',
+    'Thailand', 'Malaysia', 'Indonesia', 'Philippines', 'India', 'Australia'
+  ];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!company.trim() || !contactName.trim() || !email.trim() || !password) {
-      setError('Vui lòng nhập đầy đủ thông tin.');
+    // Validate Step 1: Account fields
+    if (!email.trim() || !password) {
+      setError('Vui lòng nhập email và mật khẩu.');
       return;
     }
 
-    // Kiểm tra email cơ bản
+    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError('Vui lòng nhập email hợp lệ.');
+      return;
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      setError('Mật khẩu phải có ít nhất 6 ký tự.');
+      return;
+    }
+
+    // Validate Step 2: Required Seller Profile fields
+    if (!companyName.trim()) {
+      setError('Vui lòng nhập tên công ty.');
+      return;
+    }
+    if (!legalRepresentative.trim()) {
+      setError('Vui lòng nhập tên người đại diện pháp luật.');
+      return;
+    }
+    if (!taxId.trim()) {
+      setError('Vui lòng nhập mã số thuế.');
+      return;
+    }
+    if (!country) {
+      setError('Vui lòng chọn quốc gia.');
       return;
     }
 
@@ -36,44 +79,45 @@ const SellerRegister: React.FC = () => {
     showLoading('Đang đăng ký Seller...');
 
     try {
-      // Call real API
+      // Step 1: Register account
+      logger.debug('SellerRegister', 'Registering account', { email });
       const response = await authService.register({
         email,
         password,
-        fullName: contactName,
-        company,
         role: 'seller'
       });
 
-      console.log('==== SELLER REGISTER RESPONSE CHECK ====');
-      console.log('Response:', response);
-      console.log('Has success:', response.success);
-      console.log('Has data:', !!response.data);
-      console.log('Message:', response.message);
-      console.log('========================================');
+      logger.debug('SellerRegister', 'Account registered', { success: !!response.success });
 
-      // Check if registration successful based on actual backend response
-      // Backend may return several formats: {success: true, data: {id}}, or {data: {user: {id}}}, or normalized {user: {id}}
+      // Check if registration successful
       const r: any = response as any;
       const registeredId = r?.user?.id || r?.data?.id || r?.data?.user?.id || r?.id;
+      
       if (response.success === true || registeredId) {
-        // Show success toast
+        // Store token and user info to localStorage
+        const token = response.token || response.data?.token;
+        if (token) {
+          localStorage.setItem('sellerToken', token);
+          localStorage.setItem('token', token);
+          localStorage.setItem('authToken', token);
+        }
+        localStorage.setItem('userName', email);
+        localStorage.setItem('role', 'seller');
+        localStorage.setItem('userRole', 'seller');
+        if (registeredId) {
+          localStorage.setItem('userId', String(registeredId));
+        }
+
+        // Show success message
         setShowSuccessToast(true);
-        showSuccess('Đăng ký Seller thành công! Đang chuyển đến trang đăng nhập...');
+        showSuccess('Đăng ký Seller thành công! Đang chuyển đến trang chỉnh sửa hồ sơ...');
 
-        // Store credentials temporarily for auto-fill on login page
-        sessionStorage.setItem('registeredEmail', email);
-        sessionStorage.setItem('registeredPassword', password);
-        // Store contact name for display after login
-        sessionStorage.setItem('registeredFullName', contactName);
-        sessionStorage.setItem('registeredCompany', company);
-        // Store returned id when available
-        if (registeredId) sessionStorage.setItem('registeredId', String(registeredId));
-
-        // Wait 5 seconds before redirecting to login
+        // Redirect to profile edit page immediately
         setTimeout(() => {
-          navigate('/login');
-        }, 5000);
+          navigate('/seller/profile', { 
+            state: { isFirstLogin: true, message: 'Chào mừng! Vui lòng điền đầy đủ thông tin hồ sơ để hoàn thành đăng ký.' } 
+          });
+        }, 2000);
       } else {
         showError(response.message || 'Đăng ký thất bại. Vui lòng thử lại.');
         setError(response.message || 'Đăng ký thất bại. Vui lòng thử lại.');
@@ -108,62 +152,211 @@ const SellerRegister: React.FC = () => {
           onClose={() => setShowSuccessToast(false)}
         />
       )}
-      <div className="min-h-screen flex items-center justify-center bg-app py-12 px-4 font-body">
-        <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center font-heading">Đăng ký Seller</h2>
-        <p className="text-sm text-gray-500 mb-4 text-center font-body">Đăng ký công ty để bắt đầu bán hàng và kết nối với khách mua.</p>
-        <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-          <p className="text-xs text-yellow-800 font-body text-center">
-            ⚠️ <strong>Lưu ý:</strong> Hệ thống đang dùng in-memory database. Sau khi đăng ký thành công, hãy đăng nhập ngay lập tức.
-          </p>
-        </div>
-        {error && !error.includes('thành công') && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
-            <p className="text-red-600 text-sm text-center font-body">{error}</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-12 px-4 font-body">
+        <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl border border-gray-100">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-extrabold mb-3 text-gray-900 font-heading">Đăng ký Seller</h2>
+            <p className="text-sm text-gray-600 font-body">Đăng ký công ty để bắt đầu bán hàng và kết nối với khách mua</p>
           </div>
-        )}
-        {error && error.includes('thành công') && (
-          <div className="bg-green-50 border border-green-200 rounded-md p-4 mb-4">
-            <p className="text-green-600 text-sm text-center font-body">{error}</p>
+        
+          {error && !error.includes('thành công') && (
+            <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 mb-6 animate-fade-in">
+              <p className="text-red-700 text-sm font-medium font-body">⚠ {error}</p>
+            </div>
+          )}
+          {error && error.includes('thành công') && (
+            <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4 mb-6 animate-fade-in">
+              <p className="text-green-700 text-sm font-medium font-body">✓ {error}</p>
+            </div>
+          )}
+
+          {/* Step 1: Account Information */}
+          <div className="mb-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+              <span className="bg-blue-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm mr-2">1</span>
+              Thông tin tài khoản
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-700 mb-2 font-semibold text-sm font-body">Email <span className="text-red-500">*</span></label>
+                <div className="flex items-center border-2 border-gray-200 rounded-xl px-4 py-3 focus-within:border-blue-500 transition-all hover:border-gray-300">
+                  <Mail className="w-5 h-5 text-gray-400 mr-3" />
+                  <input 
+                    type="email" 
+                    value={email} 
+                    onChange={e => setEmail(e.target.value)} 
+                    className="w-full outline-none font-body" 
+                    placeholder="email@company.com" 
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-gray-700 mb-2 font-semibold text-sm font-body">Mật khẩu <span className="text-red-500">*</span></label>
+                <div className="flex items-center border-2 border-gray-200 rounded-xl px-4 py-3 focus-within:border-blue-500 transition-all hover:border-gray-300">
+                  <Lock className="w-5 h-5 text-gray-400 mr-3" />
+                  <input 
+                    type="password" 
+                    value={password} 
+                    onChange={e => setPassword(e.target.value)} 
+                    className="w-full outline-none font-body" 
+                    placeholder="Tối thiểu 6 ký tự" 
+                  />
+                </div>
+              </div>
+            </div>
           </div>
-        )}
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2 font-body">Tên công ty</label>
-          <div className="flex items-center border rounded px-3 py-2">
-            <User className="w-5 h-5 text-gray-400 mr-2" />
-            <input type="text" value={company} onChange={e => setCompany(e.target.value)} className="w-full outline-none font-body" placeholder="Tên công ty hoặc nhà máy" />
+
+          {/* Step 2: Company Information */}
+          <div className="mb-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+              <span className="bg-purple-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm mr-2">2</span>
+              Thông tin công ty
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-700 mb-2 font-semibold text-sm font-body">Tên công ty <span className="text-red-500">*</span></label>
+                  <div className="flex items-center border-2 border-gray-200 rounded-xl px-4 py-3 focus-within:border-purple-500 transition-all hover:border-gray-300">
+                    <Building2 className="w-5 h-5 text-gray-400 mr-3" />
+                    <input 
+                      type="text" 
+                      value={companyName} 
+                      onChange={e => setCompanyName(e.target.value)} 
+                      className="w-full outline-none font-body" 
+                      placeholder="Tên công ty" 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 mb-2 font-semibold text-sm font-body">Người đại diện pháp luật <span className="text-red-500">*</span></label>
+                  <div className="flex items-center border-2 border-gray-200 rounded-xl px-4 py-3 focus-within:border-purple-500 transition-all hover:border-gray-300">
+                    <User className="w-5 h-5 text-gray-400 mr-3" />
+                    <input 
+                      type="text" 
+                      value={legalRepresentative} 
+                      onChange={e => setLegalRepresentative(e.target.value)} 
+                      className="w-full outline-none font-body" 
+                      placeholder="Họ và tên" 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-700 mb-2 font-semibold text-sm font-body">Mã số thuế <span className="text-red-500">*</span></label>
+                  <div className="flex items-center border-2 border-gray-200 rounded-xl px-4 py-3 focus-within:border-purple-500 transition-all hover:border-gray-300">
+                    <FileText className="w-5 h-5 text-gray-400 mr-3" />
+                    <input 
+                      type="text" 
+                      value={taxId} 
+                      onChange={e => setTaxId(e.target.value)} 
+                      className="w-full outline-none font-body" 
+                      placeholder="MST/Tax ID" 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 mb-2 font-semibold text-sm font-body">Quốc gia <span className="text-red-500">*</span></label>
+                  <div className="flex items-center border-2 border-gray-200 rounded-xl px-4 py-3 focus-within:border-purple-500 transition-all hover:border-gray-300">
+                    <Globe className="w-5 h-5 text-gray-400 mr-3" />
+                    <select 
+                      value={country} 
+                      onChange={e => setCountry(e.target.value)} 
+                      className="w-full outline-none font-body bg-transparent"
+                    >
+                      <option value="">Chọn quốc gia</option>
+                      {countries.map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-700 mb-2 font-semibold text-sm font-body">Ngành nghề (tùy chọn)</label>
+                  <div className="flex items-center border-2 border-gray-200 rounded-xl px-4 py-3 focus-within:border-purple-500 transition-all hover:border-gray-300">
+                    <Building2 className="w-5 h-5 text-gray-400 mr-3" />
+                    <input 
+                      type="text" 
+                      value={industry} 
+                      onChange={e => setIndustry(e.target.value)} 
+                      className="w-full outline-none font-body" 
+                      placeholder="Ví dụ: Thực phẩm" 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 mb-2 font-semibold text-sm font-body">Thành phố (tùy chọn)</label>
+                  <div className="flex items-center border-2 border-gray-200 rounded-xl px-4 py-3 focus-within:border-purple-500 transition-all hover:border-gray-300">
+                    <Globe className="w-5 h-5 text-gray-400 mr-3" />
+                    <input 
+                      type="text" 
+                      value={city} 
+                      onChange={e => setCity(e.target.value)} 
+                      className="w-full outline-none font-body" 
+                      placeholder="Tên thành phố" 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-gray-700 mb-2 font-semibold text-sm font-body">Website (tùy chọn)</label>
+                <div className="flex items-center border-2 border-gray-200 rounded-xl px-4 py-3 focus-within:border-purple-500 transition-all hover:border-gray-300">
+                  <Globe className="w-5 h-5 text-gray-400 mr-3" />
+                  <input 
+                    type="url" 
+                    value={website} 
+                    onChange={e => setWebsite(e.target.value)} 
+                    className="w-full outline-none font-body" 
+                    placeholder="https://company.com" 
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-gray-700 mb-2 font-semibold text-sm font-body">Mô tả công ty (tùy chọn)</label>
+                <textarea 
+                  value={description} 
+                  onChange={e => setDescription(e.target.value)} 
+                  rows={3}
+                  className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-purple-500 transition-all hover:border-gray-300 font-body" 
+                  placeholder="Giới thiệu ngắn về công ty..."
+                />
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2 font-body">Người liên hệ</label>
-          <div className="flex items-center border rounded px-3 py-2">
-            <User className="w-5 h-5 text-gray-400 mr-2" />
-            <input type="text" value={contactName} onChange={e => setContactName(e.target.value)} className="w-full outline-none font-body" placeholder="Họ và tên" />
+
+          <button 
+            type="submit" 
+            className="w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white py-4 rounded-xl font-bold text-lg hover:shadow-xl transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed font-body" 
+            disabled={isLoading}
+          >
+            {isLoading ? 'Đang đăng ký...' : 'Đăng ký Seller'}
+          </button>
+
+          <div className="mt-6 flex justify-between text-sm">
+            <Link to="/login" className="text-blue-600 hover:underline font-semibold font-body">
+              Đã có tài khoản? Đăng nhập
+            </Link>
           </div>
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2 font-body">Email liên hệ</label>
-          <div className="flex items-center border rounded px-3 py-2">
-            <Mail className="w-5 h-5 text-gray-400 mr-2" />
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full outline-none font-body" placeholder="Địa chỉ email" />
+
+          <div className="mt-6 text-xs text-gray-500 text-center font-body bg-gray-50 rounded-lg p-4">
+            <p className="font-semibold mb-1">📋 Lưu ý:</p>
+            <p>Tài khoản seller cần được xác minh trước khi có thể đăng sản phẩm.</p>
+            <p className="mt-1">Các thông tin có dấu <span className="text-red-500">*</span> là bắt buộc.</p>
           </div>
-        </div>
-        <div className="mb-6">
-          <label className="block text-gray-700 mb-2 font-body">Mật khẩu</label>
-          <div className="flex items-center border rounded px-3 py-2">
-            <Lock className="w-5 h-5 text-gray-400 mr-2" />
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full outline-none font-body" placeholder="Chọn mật khẩu bảo mật" />
-          </div>
-        </div>
-        <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded font-semibold hover:bg-blue-700 transition-colors font-body" disabled={isLoading}>
-          {isLoading ? 'Đang đăng ký...' : 'Đăng ký'}
-        </button>
-        <div className="mt-4 flex justify-between text-sm">
-          <Link to="/login" className="text-blue-600 hover:underline font-body">Đã có tài khoản? Đăng nhập</Link>
-        </div>
-        <div className="mt-6 text-sm text-gray-500 text-center font-body">Đăng ký seller sẽ được xác minh trước khi kích hoạt.</div>
-      </form>
-    </div>
+        </form>
+      </div>
     </>
   );
 };

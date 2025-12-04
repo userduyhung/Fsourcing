@@ -35,7 +35,14 @@ async function request(method: 'get' | 'post' | 'put' | 'delete' | 'patch', path
     data,
     params,
   });
-  return res.data;
+  
+  // Backend wraps response in { data: ... }
+  // Unwrap if present, otherwise return as-is
+  const responseData = res.data;
+  if (responseData && typeof responseData === 'object' && 'data' in responseData) {
+    return responseData.data;
+  }
+  return responseData;
 }
 
 // Instantiate generated API wrappers using the request function

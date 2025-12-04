@@ -1,4 +1,5 @@
 import emailjs from '@emailjs/browser';
+import { logger } from '../utils/logger';
 
 // ===================================
 // CẤU HÌNH EMAILJS
@@ -58,7 +59,7 @@ class EmailService {
     try {
       // Kiểm tra cấu hình
       if (!this.isConfigured()) {
-        console.warn('EmailJS chưa được cấu hình đầy đủ');
+        logger.warn('EmailService', 'EmailJS not configured');
         return {
           success: false,
           message: 'EmailJS chưa được cấu hình',
@@ -104,7 +105,7 @@ class EmailService {
         EMAILJS_CONFIG.PUBLIC_KEY
       );
 
-      console.log('✅ Email đã gửi thành công:', response);
+      logger.info('EmailService', 'email sent successfully', { status: response.status });
 
       return {
         success: true,
@@ -112,7 +113,7 @@ class EmailService {
       };
 
     } catch (error: any) {
-      console.error('❌ Lỗi khi gửi email:', error);
+      logger.error('EmailService', 'error sending email', { message: error.text || error.message });
       
       return {
         success: false,

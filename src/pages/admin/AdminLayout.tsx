@@ -9,7 +9,8 @@ import {
   Settings, 
   BarChart3, 
   Shield,
-  LogOut
+  LogOut,
+  ShoppingBag
 } from 'lucide-react';
 
 const AdminLayout: React.FC = () => {
@@ -23,6 +24,7 @@ const AdminLayout: React.FC = () => {
 
   const menuItems = [
     { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/admin/orders', label: 'Order Management', icon: ShoppingBag },
     { path: '/admin/users', label: 'User Management', icon: Users },
     { path: '/admin/sellers', label: 'Seller Approval', icon: UserCheck },
     { path: '/admin/content', label: 'Content Management', icon: FileText },

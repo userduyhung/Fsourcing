@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -13,11 +13,15 @@ import {
   X,
   MessageCircle
 } from 'lucide-react';
+import { buyerService } from '../../services/buyerService';
 
 const BuyerLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [buyerProfile, setBuyerProfile] = useState<any>(
+    JSON.parse(localStorage.getItem('buyerProfile') || '{}')
+  );
 
   // Kiểm tra authentication khi component mount
   useEffect(() => {
@@ -29,8 +33,39 @@ const BuyerLayout: React.FC = () => {
     }
   }, [navigate]);
 
-  // Get buyer profile from localStorage
-  const buyerProfile = JSON.parse(localStorage.getItem('buyerProfile') || '{}');
+  // Fetch profile từ API khi component mount và update localStorage
+  useEffect(() => {
+    const fetchAndUpdateProfile = async () => {
+      try {
+        const profile = await buyerService.getProfile();
+        
+        // Get current buyerProfile from localStorage
+        const currentProfile = JSON.parse(localStorage.getItem('buyerProfile') || '{}');
+        
+        // Merge API data với localStorage (giữ lại email và các field khác từ login)
+        const updatedProfile = {
+          ...currentProfile,
+          fullName: profile.name || currentProfile.fullName || '',
+          company: profile.companyName || currentProfile.company || '',
+          phone: profile.phone || currentProfile.phone || '',
+          country: profile.country || currentProfile.country || ''
+        };
+        
+        // Update localStorage
+        localStorage.setItem('buyerProfile', JSON.stringify(updatedProfile));
+        
+        // Dispatch event để App.tsx và UserMenu re-render
+        window.dispatchEvent(new Event('userProfileUpdated'));
+        
+        // Update state
+        setBuyerProfile(updatedProfile);
+      } catch (error) {
+        console.error('Failed to fetch buyer profile:', error);
+      }
+    };
+
+    fetchAndUpdateProfile();
+  }, []);
 
   const handleLogout = () => {
     // Xóa tất cả thông tin buyer
@@ -38,6 +73,7 @@ const BuyerLayout: React.FC = () => {
     localStorage.removeItem('buyerProfile');
     localStorage.removeItem('userName');
     localStorage.removeItem('userRole');
+    localStorage.removeItem('cartId'); // Clear cart to prevent ownership conflict
     
     // Dispatch event để App.tsx cập nhật state
     window.dispatchEvent(new Event('userLoggedIn'));
@@ -149,8 +185,8 @@ const BuyerLayout: React.FC = () => {
                 <Bell className="w-6 h-6 text-gray-400 hover:text-gray-600 cursor-pointer" />
                 <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
               </div>
-              <div className="text-sm text-gray-500">
-                Welcome back, {buyerProfile.fullName?.split(' ')[0] || 'Buyer'}
+              <div className="text-sm text-gray-600 font-medium">
+                Xin chào, <span className="text-blue-600">{buyerProfile.fullName || 'Người mua'}</span>
               </div>
             </div>
           </div>
