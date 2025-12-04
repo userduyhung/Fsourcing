@@ -39,6 +39,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagement from './pages/admin/UserManagement';
 import SellerApproval from './pages/admin/SellerApproval';
 import OrderManagement from './pages/admin/OrderManagement';
+import PaymentTransactions from './pages/admin/PaymentTransactions';
 import BuyerRegister from './pages/buyer/BuyerRegister';
 import ForgotPassword from './pages/buyer/ForgotPassword';
 import ChangePassword from './pages/buyer/ChangePassword';
@@ -526,6 +527,7 @@ function App() {
           <Route path="/admin/*" element={<AdminLayout />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/orders" element={<OrderManagement />} />
+          <Route path="/admin/payments" element={<PaymentTransactions />} />
           <Route path="/admin/user-management" element={<UserManagement />} />
           <Route path="/admin/seller-approval" element={<SellerApproval />} />
           <Route path="/cart" element={

@@ -10,6 +10,7 @@ const OrderList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [showGrouped, setShowGrouped] = useState<boolean>(false); // false = split (per-order), true = grouped by cart
   const [userName, setUserName] = useState<string>('Người dùng');
 
   useEffect(() => {
@@ -156,14 +157,71 @@ const OrderList: React.FC = () => {
     ? orders 
     : orders.filter(o => o.status.toLowerCase() === statusFilter.toLowerCase());
 
+  // Group split orders (one logical transaction can be split into multiple orders by seller)
+  // Grouping key: cartId when available, otherwise order.id
+  const groupedMap = orders.reduce((acc: Record<string, OrderDto[]>, o) => {
+    const key = o.cartId && o.cartId.trim() !== '' ? o.cartId : o.id;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(o);
+    return acc;
+  }, {});
+
+  type GroupedOrder = {
+    key: string;
+    orders: OrderDto[];
+    id: string; // primary id to navigate to
+    status: string; // aggregated status
+    totalAmount: number;
+    createdAt: string;
+    itemsCount: number;
+    firstProductName?: string;
+  };
+
+  const groupedOrders: GroupedOrder[] = Object.keys(groupedMap).map((key) => {
+    const group = groupedMap[key];
+    const statuses = Array.from(new Set(group.map(g => g.status || '').filter(Boolean)));
+    let aggStatus = group[0].status || '';
+    if (statuses.length === 1) {
+      aggStatus = statuses[0];
+    } else {
+      // Mixed statuses — mark as 'partial' to indicate different states across split orders
+      aggStatus = 'partial';
+    }
+
+    return {
+      key,
+      orders: group,
+      id: group[0].id,
+      status: aggStatus,
+      totalAmount: group.reduce((s, it) => s + (it.totalAmount || it.total || 0), 0),
+      // take earliest createdAt
+      createdAt: group.map(g => g.createdAt).sort()[0],
+      itemsCount: group.reduce((c, it) => c + (it.items?.length || 0), 0),
+      firstProductName: group[0].items && group[0].items.length > 0 ? group[0].items[0].productName : undefined
+    };
+  });
+
+  // For filtering and display use groupedOrders or raw orders depending on view
+  const filteredGrouped = statusFilter === 'all' ? groupedOrders : groupedOrders.filter(g => (g.status || '').toLowerCase() === statusFilter.toLowerCase());
+  const filteredSplit = statusFilter === 'all' ? orders : orders.filter(o => (o.status || '').toLowerCase() === statusFilter.toLowerCase());
+
+  // Active lists depending on toggle
+  const activeList = showGrouped ? groupedOrders : orders;
+  const activeFiltered = showGrouped ? filteredGrouped : filteredSplit;
+
+  const statusCount = (val: string) => {
+    if (!val || val === 'all') return activeList.length;
+    return activeList.filter(i => ((i.status || '').toLowerCase() === val)).length;
+  };
+
   const statusTabs = [
-    { value: 'all', label: 'Tất cả', count: orders.length, color: 'blue', icon: Package },
-    { value: 'pending', label: 'Chờ xác nhận', count: orders.filter(o => o.status.toLowerCase() === 'pending').length, color: 'yellow', icon: Clock },
-    { value: 'confirmed', label: 'Đã xác nhận', count: orders.filter(o => o.status.toLowerCase() === 'confirmed').length, color: 'blue', icon: CheckCircle },
-    { value: 'shipped', label: 'Đang giao', count: orders.filter(o => o.status.toLowerCase() === 'shipped').length, color: 'purple', icon: Truck },
-    { value: 'delivered', label: 'Đã giao', count: orders.filter(o => o.status.toLowerCase() === 'delivered').length, color: 'green', icon: CheckCircle },
-    { value: 'cancelled', label: 'Đã hủy', count: orders.filter(o => o.status.toLowerCase() === 'cancelled').length, color: 'red', icon: XCircle },
-    { value: 'refunded', label: 'Đã hoàn tiền', count: orders.filter(o => o.status.toLowerCase() === 'refunded').length, color: 'orange', icon: RefreshCw },
+    { value: 'all', label: 'Tất cả', count: statusCount('all'), color: 'blue', icon: Package },
+    { value: 'pending', label: 'Chờ xác nhận', count: statusCount('pending'), color: 'yellow', icon: Clock },
+    { value: 'confirmed', label: 'Đã xác nhận', count: statusCount('confirmed'), color: 'blue', icon: CheckCircle },
+    { value: 'shipped', label: 'Đang giao', count: statusCount('shipped'), color: 'purple', icon: Truck },
+    { value: 'delivered', label: 'Đã giao', count: statusCount('delivered'), color: 'green', icon: CheckCircle },
+    { value: 'cancelled', label: 'Đã hủy', count: statusCount('cancelled'), color: 'red', icon: XCircle },
+    { value: 'refunded', label: 'Đã hoàn tiền', count: statusCount('refunded'), color: 'orange', icon: RefreshCw },
   ];
 
   if (loading) {
@@ -228,6 +286,10 @@ const OrderList: React.FC = () => {
         <div className="flex items-center gap-3 mb-4">
           <Filter className="w-5 h-5 text-gray-700" />
           <h3 className="text-lg font-semibold text-gray-900">Lọc theo trạng thái</h3>
+          <div className="ml-auto flex items-center gap-2">
+            <label className="text-sm text-gray-600">Hiển thị gộp</label>
+            <input type="checkbox" checked={showGrouped} onChange={(e) => setShowGrouped(e.target.checked)} className="transform scale-95" />
+          </div>
         </div>
         
         <div className="flex flex-wrap gap-3">
@@ -261,14 +323,14 @@ const OrderList: React.FC = () => {
       </div>
 
       {/* Thống kê nhanh */}
-      {filteredOrders.length > 0 && (
+      {(showGrouped ? filteredGrouped.length : filteredSplit.length) > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg p-4 border shadow-sm">
             <div className="flex items-center gap-3">
               <Package className="w-8 h-8 text-blue-600" />
               <div>
                 <p className="text-sm text-gray-600">Tổng giao dịch</p>
-                <p className="text-2xl font-bold text-gray-900">{orders.length}</p>
+                <p className="text-2xl font-bold text-gray-900">{activeList.length}</p>
               </div>
             </div>
           </div>
@@ -278,7 +340,7 @@ const OrderList: React.FC = () => {
               <div>
                 <p className="text-sm text-gray-600">Thành công</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {orders.filter(o => ['confirmed', 'shipped', 'delivered'].includes(o.status.toLowerCase())).length}
+                  {activeList.filter(o => ['confirmed', 'shipped', 'delivered'].includes((o.status || '').toLowerCase())).length}
                 </p>
               </div>
             </div>
@@ -289,7 +351,7 @@ const OrderList: React.FC = () => {
               <div>
                 <p className="text-sm text-gray-600">Chờ xử lý</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {orders.filter(o => o.status.toLowerCase() === 'pending').length}
+                  {activeList.filter(o => ((o.status || '').toLowerCase() === 'pending')).length}
                 </p>
               </div>
             </div>
@@ -300,7 +362,7 @@ const OrderList: React.FC = () => {
               <div>
                 <p className="text-sm text-gray-600">Tổng chi tiêu</p>
                 <p className="text-lg font-bold text-gray-900">
-                  {formatCurrency(filteredOrders.reduce((sum, o) => sum + o.totalAmount, 0))}
+                  {formatCurrency(activeFiltered.reduce((sum, o) => sum + ((o as any).totalAmount || (o as any).total || 0), 0))}
                 </p>
               </div>
             </div>
@@ -308,7 +370,7 @@ const OrderList: React.FC = () => {
         </div>
       )}
       
-      {filteredOrders.length === 0 && orders.length > 0 ? (
+      {activeFiltered.length === 0 && activeList.length > 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border shadow-sm">
           <AlertCircle className="w-16 h-16 mx-auto text-yellow-500 mb-4" />
           <p className="text-gray-700 text-lg font-medium mb-2">Không tìm thấy đơn hàng</p>
@@ -322,7 +384,7 @@ const OrderList: React.FC = () => {
             Xem tất cả đơn hàng
           </button>
         </div>
-      ) : filteredOrders.length === 0 ? (
+      ) : activeFiltered.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border shadow-sm">
           <Package className="w-16 h-16 mx-auto text-gray-300 mb-4" />
           <p className="text-gray-500 text-lg mb-2">Chưa có giao dịch nào</p>
@@ -338,92 +400,85 @@ const OrderList: React.FC = () => {
         <>
           {/* Danh sách giao dịch */}
           <div className="space-y-3">
-            {filteredOrders.map((order) => (
+            {showGrouped ? (
+              filteredGrouped.map((group) => (
+                <div 
+                  key={group.key} 
+                  className="border rounded-lg bg-white shadow-sm hover:shadow-md transition cursor-pointer overflow-hidden"
+                  onClick={() => navigate(`/buyer/orders/${group.id}`)}
+                >
+                  <div className="flex">
+                    <div className={`w-2 ${
+                      group.status.toLowerCase() === 'delivered' ? 'bg-green-500' :
+                      group.status.toLowerCase() === 'shipped' ? 'bg-blue-500' :
+                      group.status.toLowerCase() === 'confirmed' ? 'bg-purple-500' :
+                      group.status.toLowerCase() === 'pending' ? 'bg-yellow-500' :
+                      'bg-gray-500'
+                    }`}></div>
+                    <div className="flex-1 p-5">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-3">
+                            <span className="font-bold text-gray-900 text-base">#{group.id.substring(0, 8).toUpperCase()}</span>
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(group.status)}`}>
+                              <span className="flex items-center gap-1.5">{getStatusIcon(group.status)}{group.status === 'partial' ? 'Nhiều trạng thái' : getStatusText(group.status)}</span>
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm mb-3">
+                            <div className="flex items-center gap-2 text-gray-600"><Calendar className="w-4 h-4" /><span>{new Date(group.createdAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></div>
+                            <div className="flex items-center gap-2 text-gray-600"><User className="w-4 h-4" /><span>{userName}</span></div>
+                            <div className="flex items-center gap-2 text-gray-600"><CreditCard className="w-4 h-4" /><span className="font-semibold text-blue-600">{formatCurrency(group.totalAmount)}</span></div>
+                          </div>
+                          {group.itemsCount > 0 && (
+                            <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 rounded px-3 py-2"><Package className="w-4 h-4" /><span>{group.itemsCount} sản phẩm</span>{group.firstProductName && (<><span>•</span><span className="truncate max-w-xs">{group.firstProductName}</span>{group.itemsCount > 1 && <span className="text-gray-400">và {group.itemsCount - 1} sản phẩm khác</span>}</>)}</div>
+                          )}
+                        </div>
+                        <button className="ml-4 p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition" onClick={(e) => { e.stopPropagation(); navigate(`/buyer/orders/${group.id}`); }}><Eye className="w-5 h-5" /></button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              filteredSplit.map((order) => (
                 <div 
                   key={order.id} 
                   className="border rounded-lg bg-white shadow-sm hover:shadow-md transition cursor-pointer overflow-hidden"
                   onClick={() => navigate(`/buyer/orders/${order.id}`)}
                 >
                   <div className="flex">
-                    {/* Left color indicator */}
                     <div className={`w-2 ${
-                      order.status.toLowerCase() === 'delivered' ? 'bg-green-500' :
-                      order.status.toLowerCase() === 'shipped' ? 'bg-blue-500' :
-                      order.status.toLowerCase() === 'confirmed' ? 'bg-purple-500' :
-                      order.status.toLowerCase() === 'pending' ? 'bg-yellow-500' :
+                      (order.status || '').toLowerCase() === 'delivered' ? 'bg-green-500' :
+                      (order.status || '').toLowerCase() === 'shipped' ? 'bg-blue-500' :
+                      (order.status || '').toLowerCase() === 'confirmed' ? 'bg-purple-500' :
+                      (order.status || '').toLowerCase() === 'pending' ? 'bg-yellow-500' :
                       'bg-gray-500'
                     }`}></div>
-                    
-                    {/* Content */}
                     <div className="flex-1 p-5">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-3">
-                            <span className="font-bold text-gray-900 text-base">
-                              #{order.id.substring(0, 8).toUpperCase()}
-                            </span>
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(order.status)}`}>
-                              <span className="flex items-center gap-1.5">
-                                {getStatusIcon(order.status)}
-                                {getStatusText(order.status)}
-                              </span>
-                            </span>
+                            <span className="font-bold text-gray-900 text-base">#{order.id.substring(0, 8).toUpperCase()}</span>
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(order.status || '')}`}><span className="flex items-center gap-1.5">{getStatusIcon(order.status || '')}{getStatusText(order.status || '')}</span></span>
                           </div>
-                          
-                          {/* Transaction details */}
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm mb-3">
-                            <div className="flex items-center gap-2 text-gray-600">
-                              <Calendar className="w-4 h-4" />
-                              <span>{new Date(order.createdAt).toLocaleDateString('vi-VN', { 
-                                day: '2-digit', 
-                                month: '2-digit', 
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-gray-600">
-                              <User className="w-4 h-4" />
-                              <span>{userName}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-gray-600">
-                              <CreditCard className="w-4 h-4" />
-                              <span className="font-semibold text-blue-600">{formatCurrency(order.totalAmount)}</span>
-                            </div>
+                            <div className="flex items-center gap-2 text-gray-600"><Calendar className="w-4 h-4" /><span>{new Date(order.createdAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></div>
+                            <div className="flex items-center gap-2 text-gray-600"><User className="w-4 h-4" /><span>{userName}</span></div>
+                            <div className="flex items-center gap-2 text-gray-600"><CreditCard className="w-4 h-4" /><span className="font-semibold text-blue-600">{formatCurrency(order.totalAmount)}</span></div>
                           </div>
-                          
-                          {/* Items preview */}
                           {order.items && order.items.length > 0 && (
-                            <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 rounded px-3 py-2">
-                              <Package className="w-4 h-4" />
-                              <span>{order.items.length} sản phẩm</span>
-                              {order.items[0]?.productName && (
-                                <>
-                                  <span>•</span>
-                                  <span className="truncate max-w-xs">{order.items[0].productName}</span>
-                                  {order.items.length > 1 && <span className="text-gray-400">và {order.items.length - 1} sản phẩm khác</span>}
-                                </>
-                              )}
-                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 rounded px-3 py-2"><Package className="w-4 h-4" /><span>{order.items.length} sản phẩm</span>{order.items[0]?.productName && (<><span>•</span><span className="truncate max-w-xs">{order.items[0].productName}</span>{order.items.length > 1 && <span className="text-gray-400">và {order.items.length - 1} sản phẩm khác</span>}</>)}</div>
                           )}
                         </div>
-                        
-                        {/* View button */}
-                        <button 
-                          className="ml-4 p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/buyer/orders/${order.id}`);
-                          }}
-                        >
-                          <Eye className="w-5 h-5" />
-                        </button>
+                        <button className="ml-4 p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition" onClick={(e) => { e.stopPropagation(); navigate(`/buyer/orders/${order.id}`); }}><Eye className="w-5 h-5" /></button>
                       </div>
                     </div>
                   </div>
                 </div>
-              ))}
+              ))
+            )}
           </div>
+          
         </>
       )}
     </div>

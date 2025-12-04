@@ -5,6 +5,7 @@ import { logger } from '../utils/logger';
 export interface AdminOrderDto {
   id: string;
   status: string;
+  paymentStatus?: string;
   cartId: string;
   deliveryAddressId: string;
   paymentMethodId: string;
@@ -54,7 +55,7 @@ class AdminOrderService {
     try {
       logger.debug('AdminOrderService', 'fetching all orders', { page, pageSize });
       
-      const response = await axiosClient.get('/orders/admin/all', {
+      const response = await axiosClient.get('/admin/orders', {
         params: { page, pageSize }
       });
       
@@ -103,6 +104,20 @@ class AdminOrderService {
     } catch (error: any) {
       logger.error('AdminOrderService', 'failed to update order status', error);
       throw new Error(error?.response?.data?.message || 'Không thể cập nhật trạng thái đơn hàng');
+    }
+  }
+
+  /**
+   * Update payment status for an order (admin)
+   */
+  async updatePaymentStatus(orderId: string, isPaid: boolean, transactionId?: string): Promise<AdminOrderDto> {
+    try {
+      logger.debug('AdminOrderService', 'updating payment status (admin)', { orderId, isPaid });
+      const response = await axiosClient.put(`/orders/admin/${orderId}/payment-status`, { isPaid, transactionId, paidAt: isPaid ? new Date().toISOString() : undefined });
+      return response.data?.data || response.data as AdminOrderDto;
+    } catch (error: any) {
+      logger.error('AdminOrderService', 'failed to update payment status (admin)', error);
+      throw new Error(error?.response?.data?.message || 'Không thể cập nhật trạng thái thanh toán');
     }
   }
 

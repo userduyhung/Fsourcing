@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserCheck, ShoppingBag, DollarSign, AlertCircle, TrendingUp, Loader2, Package } from 'lucide-react';
+import { Users, UserCheck, ShoppingBag, DollarSign, AlertCircle, TrendingUp, Loader2, Package, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import adminOrderService from '../../services/adminOrderService';
 import { logger } from '../../utils/logger';
@@ -145,6 +145,13 @@ const AdminDashboard: React.FC = () => {
           >
             <Package className="w-5 h-5" />
             Xem tất cả đơn hàng
+          </button>
+          <button
+            onClick={() => navigate('/admin/payments')}
+            className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 font-medium"
+          >
+            <CreditCard className="w-5 h-5" />
+            Xem giao dịch
           </button>
           <button
             onClick={fetchStatistics}
