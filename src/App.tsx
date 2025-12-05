@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { Search, Shield, Globe, TrendingUp, Users, Star, Mail, Phone, MapPin, ShoppingCart } from 'lucide-react';
 import Logo from './components/Logo';
 import SearchBar from './components/SearchBar';
@@ -230,15 +230,15 @@ function App() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <div className="flex items-center">
-                <Link to="/" className="flex items-center">
+                <Link to={user && user.role === 'seller' ? '/seller/dashboard' : user && user.role === 'admin' ? '/admin/dashboard' : '/'} className="flex items-center">
                   <Logo className="h-8 w-8" />
                   <span className="ml-2 text-xl font-bold text-gray-900 font-sans">Fsourcing</span>
                 </Link>
               </div>
               <nav className="hidden md:flex space-x-8 font-sans">
-                {/* If logged-in user is a seller, show only seller dashboard link; hide buyer-facing product listing */}
-                {user && user.role === 'seller' ? (
-                  <Link to="/seller/dashboard" className="text-gray-600 hover:text-blue-600 transition-colors">Dashboard nhà cung cấp</Link>
+                {/* If logged-in user is a seller or admin, show only their dashboard link; hide buyer-facing product listing */}
+                {user && (user.role === 'seller' || user.role === 'admin') ? (
+                  <Link to={user.role === 'seller' ? '/seller/dashboard' : '/admin/dashboard'} className="text-gray-600 hover:text-blue-600 transition-colors">Dashboard</Link>
                 ) : (
                   <>
                     <Link to="/products" className="text-gray-600 hover:text-blue-600 transition-colors">Sản phẩm</Link>
@@ -285,6 +285,12 @@ function App() {
         {/* Main Routes */}
         <Routes>
           <Route path="/" element={
+            // If seller or admin is logged in, redirect them to their dashboard instead of public home
+            user && user.role === 'seller' ? (
+              <Navigate to="/seller/dashboard" replace />
+            ) : user && user.role === 'admin' ? (
+              <Navigate to="/admin/dashboard" replace />
+            ) : (
             <>
               {/* <ChatWidget /> */}
               {/* Hero Section - Cải thiện cho Buyer */}
@@ -439,7 +445,7 @@ function App() {
                 </section>
               )}
             </>
-          } />
+  )} />
           <Route path="/products" element={
             <RoleGuard blockedRoles={['seller']} redirectTo={'/seller/dashboard'}>
               <ProductList addToCart={addToCart} />
@@ -450,7 +456,7 @@ function App() {
           <Route path="/buyer/login" element={<LoginPage />} />
           <Route path="/seller/login" element={<LoginPage />} />
           <Route path="/admin/login" element={<AdminLogin />} />
-          // ...existing code...
+          {/* ...existing code... */}
           <Route path="/register" element={<UnifiedRegister />} />
           <Route path="/unified-register" element={<UnifiedRegister />} />
           <Route path="/about" element={<About />} />

@@ -67,12 +67,26 @@ const SellerDashboard: React.FC = () => {
           }
         }
 
-        // Handle products
+        // Handle products (normalize different API shapes)
         if (productsResp.status === 'fulfilled') {
-          const productsData = productsResp.value || [];
+          let productsData: any = productsResp.value || [];
+
+          // Normalize shapes like: ProductDto[] or { data: ProductDto[], totalCount }
+          if (!Array.isArray(productsData)) {
+            if (Array.isArray(productsData.data)) {
+              productsData = productsData.data;
+            } else if (Array.isArray(productsData.items)) {
+              productsData = productsData.items;
+            } else {
+              // Unknown shape, try to extract any array-like field
+              const maybeArray = Object.values(productsData).find(v => Array.isArray(v));
+              productsData = maybeArray || [];
+            }
+          }
+
           setProducts(productsData);
           logger.info('SellerDashboard', `✅ Loaded ${productsData.length} products`);
-          
+
           // Save to localStorage as backup
           localStorage.setItem('sellerProducts', JSON.stringify(productsData));
         } else {
@@ -81,11 +95,27 @@ const SellerDashboard: React.FC = () => {
           setProducts(localProducts ? JSON.parse(localProducts) : []);
         }
 
-        // Handle orders
+        // Handle orders (normalize different API shapes to extract total count)
         if (ordersResp.status === 'fulfilled') {
-          const ordersData = ordersResp.value?.data?.total || 0;
-          setOrdersCount(ordersData);
-          logger.info('SellerDashboard', `✅ Loaded orders count: ${ordersData}`);
+          const raw = ordersResp.value || {};
+
+          // Possible shapes:
+          // - OrderListResponse (has .data.total)
+          // - { data: { items: [], total: N } }
+          // - { items: [], total: N }
+          let total = 0;
+          if (raw.data && typeof raw.data.total === 'number') {
+            total = raw.data.total;
+          } else if (typeof raw.total === 'number') {
+            total = raw.total;
+          } else if (raw.data && Array.isArray(raw.data.items)) {
+            total = raw.data.items.length;
+          } else if (Array.isArray((raw as any).items)) {
+            total = (raw as any).items.length;
+          }
+
+          setOrdersCount(total);
+          logger.info('SellerDashboard', `✅ Loaded orders count: ${total}`);
         } else {
           logger.warn('SellerDashboard', '⚠️ Failed to fetch orders');
           setOrdersCount(0);
@@ -110,7 +140,7 @@ const SellerDashboard: React.FC = () => {
     return () => { mounted = false; };
   }, []);
 
-  const isNewSeller = !sellerProfile || ((!sellerProfile.company && !sellerProfile.fullName) && products.length === 0);
+  const isNewSeller = !sellerProfile || ((!sellerProfile.companyName && !sellerProfile.legalRepresentative && !sellerProfile.fullName) && products.length === 0);
 
   if (isNewSeller) {
     return (
@@ -157,8 +187,27 @@ const SellerDashboard: React.FC = () => {
     );
   }
 
-  const sellerName = sellerProfile?.companyName || sellerProfile?.legalRepresentative || 'Seller';
-  const email = sellerProfile?.emailAddress || localStorage.getItem('userEmail') || '';
+  const sellerName = sellerProfile?.companyName || sellerProfile?.company || sellerProfile?.legalRepresentative || sellerProfile?.fullName || 'Seller';
+
+  // Normalize email from possible backend shapes / casing
+  const email =
+    sellerProfile?.email ||
+    sellerProfile?.Email ||
+    sellerProfile?.emailAddress ||
+    sellerProfile?.contact?.email ||
+    sellerProfile?.contactEmail ||
+    localStorage.getItem('userEmail') ||
+    (() => {
+      // Try sellerProfile stored in localStorage (older flows)
+      try {
+        const sp = localStorage.getItem('sellerProfile');
+        if (!sp) return '';
+        const parsed = JSON.parse(sp);
+        return parsed?.email || parsed?.Email || parsed?.emailAddress || '';
+      } catch {
+        return '';
+      }
+    })();
   const productsCount = products.length;
 
   // Show loading state

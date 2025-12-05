@@ -3,11 +3,6 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import authService from '../services/authService';
 
-const demoCredentials = {
-  buyer: { email: 'buyer@demo.com', password: 'demo123', name: 'John Buyer', role: 'buyer', dashboard: '/buyer/dashboard' },
-  seller: { email: 'seller@demo.com', password: 'demo123', name: 'Demo Seller', role: 'seller', dashboard: '/seller/dashboard' }
-};
-
 const LoginPage: React.FC = () => {
   const [role, setRole] = useState<'buyer' | 'seller'>('buyer');
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -37,52 +32,8 @@ const LoginPage: React.FC = () => {
     if (!validateForm()) return;
     setIsLoading(true);
     try {
-      const cred = demoCredentials[role];
+      // proceed to call backend login
 
-      // If user used demo credentials, keep previous mock behavior
-      if (formData.email === cred.email && formData.password === cred.password) {
-        if (role === 'seller') {
-          localStorage.setItem('sellerToken', 'mock-seller-token');
-          localStorage.setItem('userName', cred.name);
-          localStorage.setItem('userRole', cred.role);
-          // One-time redirect for demo/new sellers: send them to add-product on first login
-          const firstSellerRedirect = localStorage.getItem('sellerFirstLoginRedirectDone');
-          window.dispatchEvent(new Event('userLoggedIn'));
-          setIsLoading(false);
-          if (!firstSellerRedirect) {
-            localStorage.setItem('sellerFirstLoginRedirectDone', '1');
-            navigate('/seller/add-product');
-          } else {
-            navigate(redirectTo);
-          }
-          return;
-        } else if (role === 'buyer') {
-          localStorage.setItem('buyerToken', 'mock-buyer-token');
-          localStorage.setItem('userName', cred.name);
-          localStorage.setItem('userRole', cred.role);
-          localStorage.setItem('buyerProfile', JSON.stringify({
-            id: 1,
-            fullName: cred.name,
-            company: 'ABC Manufacturing Co',
-            email: cred.email,
-            phone: '+1-555-0123',
-            country: 'Vietnam',
-            joinDate: '2024-01-15T00:00:00Z'
-          }));
-        } else if (role === 'supplier') {
-          localStorage.setItem('supplierToken', 'mock-supplier-token');
-          localStorage.setItem('userName', cred.name);
-          localStorage.setItem('userRole', cred.role);
-        }
-        // For non-seller demo flows, continue as before
-        window.dispatchEvent(new Event('userLoggedIn'));
-        setIsLoading(false);
-        // Redirect demo users back to previous page if available
-        navigate(redirectTo);
-        return;
-      }
-
-      // Otherwise call backend login
       const resp = await authService.login({ email: formData.email, password: formData.password });
       // authService returns normalized response with token and user
       if (resp && resp.user) {
@@ -158,16 +109,7 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  // Hàm tự động fill thông tin demo
-  const handleFillDemoCredentials = () => {
-    const cred = demoCredentials[role];
-    setFormData({
-      email: cred.email,
-      password: cred.password
-    });
-    // Xóa errors nếu có
-    setErrors({});
-  };
+  // no demo autofill
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
@@ -287,15 +229,7 @@ const LoginPage: React.FC = () => {
                 <Link to="/seller/register" className="font-medium text-blue-600 hover:text-blue-500 font-sans">Đăng ký ngay</Link>
               </p>
             )}
-            <div 
-              className="mt-4 p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors border-2 border-transparent hover:border-blue-300"
-              onClick={handleFillDemoCredentials}
-              title="Click để tự động điền thông tin đăng nhập"
-            >
-              <p className="text-xs text-blue-800 font-semibold font-sans">Demo Credentials: (Click để tự động điền)</p>
-              <p className="text-xs text-blue-700 font-sans">Email: {demoCredentials[role].email}</p>
-              <p className="text-xs text-blue-700 font-sans">Password: {demoCredentials[role].password}</p>
-            </div>
+            {/* demo credentials removed */}
           </div>
         </form>
       </div>

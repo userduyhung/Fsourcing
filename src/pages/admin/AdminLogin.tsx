@@ -110,17 +110,7 @@ const AdminLogin: React.FC = () => {
             {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>
         </form>
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <h4 className="text-sm font-semibold text-blue-900 mb-2">Tài khoản demo quản trị:</h4>
-          <div
-            onClick={handleDemoClick}
-            className="bg-white p-2 rounded border text-xs cursor-pointer hover:bg-blue-50 hover:border-blue-400 transition-colors"
-            title="Click để tự động điền thông tin"
-          >
-            <span className="font-semibold text-blue-800">adminb2b@marketplace.com / 123456</span>
-          </div>
-          <p className="text-xs text-gray-600 mt-2 italic">💡 Click vào ô trên để tự động điền thông tin</p>
-        </div>
+        
       </div>
     </div>
   );

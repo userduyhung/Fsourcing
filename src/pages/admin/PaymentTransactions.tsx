@@ -227,11 +227,12 @@ const PaymentTransactions: React.FC = () => {
     const orderPaymentStatus = (order?.paymentStatus || '').toString().toLowerCase();
     const pm = (p?.paymentMethod || '').toString().toLowerCase();
 
+    // If order explicitly marked paid/completed -> treat as completed first
+    // (Do this before COD-check so delivered orders show completed even when paymentMethod is COD)
+    if (['completed', 'delivered', 'paid', 'success'].includes(orderPaymentStatus) || ['delivered', 'completed'].includes(orderStatus)) return 'completed';
+
     // If payment method indicates COD, show awaiting payment
     if (pm.includes('cod')) return 'awaiting_payment';
-
-    // If order explicitly marked paid/completed
-    if (['completed', 'delivered', 'paid', 'success'].includes(orderPaymentStatus) || ['delivered', 'completed'].includes(orderStatus)) return 'completed';
 
     // If order cancelled or refunded -> failed
     if (['cancelled', 'refunded'].includes(orderStatus) || ['failed', 'cancelled', 'refunded', 'disputed'].includes(orderPaymentStatus)) return 'failed';

@@ -34,7 +34,7 @@ const SellerForgotPassword: React.FC = () => {
           <label className="block text-gray-700 mb-2">Email</label>
           <div className="flex items-center border rounded px-3 py-2">
             <Mail className="w-5 h-5 text-gray-400 mr-2" />
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full outline-none" placeholder="seller@demo.com" />
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full outline-none" placeholder="Nhập email" />
           </div>
         </div>
         <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded font-semibold hover:bg-blue-700 transition-colors" disabled={isLoading}>

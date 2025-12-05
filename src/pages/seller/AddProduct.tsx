@@ -601,7 +601,7 @@ const AddProduct: React.FC = () => {
                           className="hidden"
                         />
                       </label>
-                      <p className="text-xs text-gray-500 mt-2">PNG, JPG, GIF tối đa 5MB • Tự động upload lên Cloudinary</p>
+                      <p className="text-xs text-gray-500 mt-2">PNG, JPG, GIF tối đa 5MB</p>
                       {uploadedImageUrl && (
                         <p className="text-xs text-green-600 mt-2 font-semibold">✓ Đã upload thành công</p>
                       )}
@@ -617,22 +617,7 @@ const AddProduct: React.FC = () => {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
-                      URL hình ảnh
-                    </label>
-                    <div className="flex items-center border-2 border-gray-200 rounded-xl px-4 py-3 focus-within:border-green-500 transition-all hover:border-gray-300">
-                      <ImageIcon className="w-5 h-5 text-gray-400 mr-3" />
-                      <input
-                        type="url"
-                        value={imageUrl}
-                        onChange={(e) => setImageUrl(e.target.value)}
-                        className="w-full outline-none"
-                        placeholder="https://example.com/image.jpg"
-                        disabled={!!imageFile}
-                      />
-                    </div>
-                  </div>
+                  
 
                   {(previewUrl || uploadedImageUrl) && (
                     <div className="mt-4">
@@ -643,9 +628,9 @@ const AddProduct: React.FC = () => {
                         className="w-full max-h-64 object-contain rounded-xl border-2 border-gray-200"
                       />
                       {uploadedImageUrl && (
-                        <p className="text-xs text-gray-500 mt-2 break-all">
-                          URL: {uploadedImageUrl}
-                        </p>
+                        <div className="mt-2">
+                          <p className="text-xs text-gray-600">Ảnh đã được upload và sẽ được lưu cùng sản phẩm.</p>
+                        </div>
                       )}
                       <button
                         type="button"
