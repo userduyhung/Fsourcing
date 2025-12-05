@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import createGeneratedApi, { RequestFn } from './api-client.generated';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_BASE || 'https://uni-b2b-fixed-production.up.railway.app/api';
 
 const client: AxiosInstance = axios.create({
   baseURL: API_BASE,
