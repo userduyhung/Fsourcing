@@ -5,8 +5,9 @@
 import { logger } from '../utils/logger';
 
 // Keep these for future use when backend is ready
+// During development prefer relative '/api' so Vite dev proxy handles requests
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
 // GUID validation helper
 function isValidGuid(id: string): boolean {

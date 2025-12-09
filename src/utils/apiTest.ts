@@ -3,7 +3,8 @@
  * Dùng file này để test API endpoints trong browser console
  */
 
-const API_BASE_URL = 'http://localhost:5000/api/Auth';
+// Use env var if set, otherwise use relative '/api' to let dev proxy forward requests
+const API_BASE_URL = import.meta.env.VITE_API_BASE || '/api/Auth';
 
 export const testAPI = {
   /**
