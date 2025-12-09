@@ -12,12 +12,13 @@ export default defineConfig({
       strict: false,
     },
     // Dev-time proxy: forward `/api/*` calls to backend during development.
-    // Set BACKEND_URL env var to override the default (http://localhost:5000).
+    // Use BACKEND_URL env var to override the default. Default now points
+    // to the Railway backend so local dev doesn't hit the FE host and avoids CORS.
     proxy: {
       '/api': {
-        target: process.env.BACKEND_URL || 'http://localhost:5000',
+        target: process.env.BACKEND_URL || 'https://uni-b2b-fixed-production.up.railway.app',
         changeOrigin: true,
-        secure: false,
+        secure: true,
         rewrite: (path) => path.replace(/^\/api/, '/api')
       }
     },
