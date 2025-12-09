@@ -14,7 +14,24 @@ function getRuntimeApiBase() {
   } catch (e) {
     // ignore
   }
-  return import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || '/api';
+  const buildBase = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE;
+  if (buildBase) return buildBase;
+
+  // If no runtime or build-time base provided, and we're running on the
+  // production frontend host (e.g. fsourcing.vercel.app), default to the
+  // Railway backend you provided so the FE doesn't try to call its own host.
+  try {
+    const host = window.location && window.location.hostname ? window.location.hostname : '';
+    if (host && host.includes('fsourcing.vercel.app')) {
+      // eslint-disable-next-line no-console
+      console.warn('[RuntimeAPI] No env found — using Railway backend fallback');
+      return 'https://uni-b2b-fixed-production.up.railway.app/api';
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  return '/api';
 }
 
 // Debug: print resolved API base at module load (helps verify runtime override)
