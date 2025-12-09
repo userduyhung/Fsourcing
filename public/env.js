@@ -16,6 +16,11 @@
 	window.__ENV.VITE_API_BASE_URL = 'https://uni-b2b-fixed-production.up.railway.app/api';
 	// Also provide the non-/api base for modules that expect it
 	window.__ENV.VITE_API_BASE = 'https://uni-b2b-fixed-production.up.railway.app';
+
+	// Cloudinary runtime configuration (added so client-side uploads work without rebuild)
+	// Values copied from your local `.env` file. Replace if you need a different account/preset.
+	window.__ENV.VITE_CLOUDINARY_CLOUD_NAME = window.__ENV.VITE_CLOUDINARY_CLOUD_NAME || 'dcworyvtj';
+	window.__ENV.VITE_CLOUDINARY_UPLOAD_PRESET = window.__ENV.VITE_CLOUDINARY_UPLOAD_PRESET || 'fsourcing-create';
 	// Direct override used by axios client code
 	window.__API_BASE = window.__API_BASE || window.__ENV.VITE_API_BASE_URL;
 })();

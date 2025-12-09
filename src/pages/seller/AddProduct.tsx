@@ -106,13 +106,13 @@ const AddProduct: React.FC = () => {
     setUploadProgress(0);
 
     try {
-      // Cloudinary configuration from environment variables
-      const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-      const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+      // Prefer build-time env, fall back to runtime `window.__ENV` (injected via public/env.js)
+      const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || (window as any).__ENV?.VITE_CLOUDINARY_CLOUD_NAME;
+      const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || (window as any).__ENV?.VITE_CLOUDINARY_UPLOAD_PRESET;
       
       // Validate configuration
       if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
-        throw new Error('Cloudinary chưa được cấu hình. Vui lòng thêm VITE_CLOUDINARY_CLOUD_NAME và VITE_CLOUDINARY_UPLOAD_PRESET vào file .env');
+        throw new Error('Cloudinary chưa được cấu hình. Nếu bạn đang chạy bản build trên server, hãy đảm bảo đã thêm `VITE_CLOUDINARY_CLOUD_NAME` và `VITE_CLOUDINARY_UPLOAD_PRESET` vào `public/env.js` hoặc biến môi trường cho frontend.');
       }
       
       // Tạo FormData để upload
@@ -220,6 +220,14 @@ const AddProduct: React.FC = () => {
     let productData: any = null;
 
     try {
+      // If user selected a file but upload hasn't produced a URL, block submit
+      if (imageFile && !uploadedImageUrl && !imageUrl.trim()) {
+        const errMsg = 'Ảnh chưa được upload thành công. Vui lòng đợi upload hoàn tất hoặc nhập URL ảnh.';
+        setValidationErrors([errMsg]);
+        showError(errMsg);
+        setIsSubmitting(false);
+        return;
+      }
       // Build product payload according to CreateProductDto
       // IMPORTANT: Backend uses camelCase (PropertyNamingPolicy = CamelCase)
       // NOTE: CreateProductDto does NOT support stockQuantity - must use separate inventory endpoint
