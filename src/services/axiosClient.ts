@@ -17,6 +17,14 @@ function getRuntimeApiBase() {
   return import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || '/api';
 }
 
+// Debug: print resolved API base at module load (helps verify runtime override)
+try {
+  // eslint-disable-next-line no-console
+  console.info('[RuntimeAPI] Resolved API base ->', getRuntimeApiBase());
+} catch (e) {
+  // ignore
+}
+
 // Tạo axios instance với config mặc định
 const axiosClient = axios.create({
   baseURL: getRuntimeApiBase(),
