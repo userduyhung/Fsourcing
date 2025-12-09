@@ -15,11 +15,36 @@ const API_BASE = (function() {
     // 2. window.__ENV.VITE_API_BASE_URL (runtime env.js canonical)
     // 3. window.__ENV.VITE_API_BASE (alternate runtime key)
     // 4. build-time import.meta.env values
-    if (win && win.__API_BASE) return win.__API_BASE;
-    if (win && win.__ENV && win.__ENV.VITE_API_BASE_URL) return win.__ENV.VITE_API_BASE_URL;
-    if (win && win.__ENV && win.__ENV.VITE_API_BASE) return win.__ENV.VITE_API_BASE;
+    if (win && win.__API_BASE) {
+      console.info('[CartService] using window.__API_BASE (runtime) ->', win.__API_BASE);
+      return win.__API_BASE;
+    }
+    if (win && win.__ENV && win.__ENV.VITE_API_BASE_URL) {
+      console.info('[CartService] using window.__ENV.VITE_API_BASE_URL (runtime) ->', win.__ENV.VITE_API_BASE_URL);
+      return win.__ENV.VITE_API_BASE_URL;
+    }
+    if (win && win.__ENV && win.__ENV.VITE_API_BASE) {
+      console.info('[CartService] using window.__ENV.VITE_API_BASE (runtime) ->', win.__ENV.VITE_API_BASE);
+      return win.__ENV.VITE_API_BASE;
+    }
   } catch (e) {}
-  return import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || '/api';
+
+  const buildApi = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE;
+  if (buildApi) {
+    console.info('[CartService] using build-time API base ->', buildApi);
+    return buildApi;
+  }
+
+  // If running on the known FE host but no runtime/build env exists, prefer Railway backend
+  try {
+    if (typeof window !== 'undefined' && window.location.hostname && window.location.hostname.includes('fsourcing.vercel.app')) {
+      const fallback = 'https://uni-b2b-fixed-production.up.railway.app/api';
+      console.warn('[CartService] No runtime/build API base found - using Railway fallback ->', fallback);
+      return fallback;
+    }
+  } catch (e) {}
+
+  return '/api';
 })();
 
 // GUID validation helper

@@ -6,9 +6,10 @@
 (function () {
   window.__ENV = window.__ENV || {};
 
-  // Set this to your local backend base (include '/api' if your backend expects it)
-  // Example: 'http://localhost:5000/api'
-  window.__ENV.VITE_LOCAL_BACKEND = 'http://localhost:5000/api';
+  // Set this to your backend base (include '/api' if your backend expects it).
+  // By default this file now points to the deployed Railway backend so the
+  // frontend will use the deployed API instead of a local host.
+  window.__ENV.VITE_LOCAL_BACKEND = 'https://uni-b2b-fixed-production.up.railway.app/api';
 
   // Optionally you can also set the VITE_API_BASE_URL used in production codepaths
   // window.__ENV.VITE_API_BASE_URL = 'http://localhost:5000/api';
