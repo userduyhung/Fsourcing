@@ -3,7 +3,9 @@ import { logger } from '../utils/logger';
 
 // Tạo axios instance với config mặc định
 const axiosClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || 'http://localhost:5000/api',
+  // Prefer explicit env var when provided. During development use relative '/api' so Vite dev-server proxy handles requests
+  // This avoids direct calls to http://localhost:5000 which may be blocked by browser extensions or CORS issues.
+  baseURL: import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || '/api',
   headers: {
     'Content-Type': 'application/json',
   },

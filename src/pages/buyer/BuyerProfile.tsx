@@ -244,11 +244,11 @@ const BuyerProfile: React.FC = () => {
         setIsLoading(false);
         setIsEditing(false);
         setShowSuccess(true);
-        // If user just registered and completed profile, redirect to home after short delay
+        // If user just registered and completed profile, redirect to buyer dashboard after short delay
         if (isFirstLogin) {
           setTimeout(() => {
             try { window.dispatchEvent(new Event('userProfileUpdated')); } catch {}
-            navigate('/');
+            navigate('/buyer/dashboard');
           }, 1200);
         }
         // Hide success message after 3 seconds
