@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "check:payment-return": "node ./scripts/check-payment-return.js",
     "build": "vite build",
     "gen-api": "swagger-typescript-api -p http://localhost:5000/swagger/v1/swagger.json -o ./src/api -n myApi.ts --axios"
   },
