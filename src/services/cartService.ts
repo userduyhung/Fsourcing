@@ -10,10 +10,16 @@ import { logger } from '../utils/logger';
 const API_BASE = (function() {
   try {
     const win = window as any;
+    // Priority:
+    // 1. window.__API_BASE (explicit runtime override)
+    // 2. window.__ENV.VITE_API_BASE_URL (runtime env.js canonical)
+    // 3. window.__ENV.VITE_API_BASE (alternate runtime key)
+    // 4. build-time import.meta.env values
     if (win && win.__API_BASE) return win.__API_BASE;
+    if (win && win.__ENV && win.__ENV.VITE_API_BASE_URL) return win.__ENV.VITE_API_BASE_URL;
     if (win && win.__ENV && win.__ENV.VITE_API_BASE) return win.__ENV.VITE_API_BASE;
   } catch (e) {}
-  return import.meta.env.VITE_API_BASE || '/api';
+  return import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || '/api';
 })();
 
 // GUID validation helper
@@ -72,10 +78,23 @@ function getHeaders(): HeadersInit {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function handleResponse(res: Response) {
   const text = await res.text().catch(() => '');
-  const data = text ? JSON.parse(text) : {};
-  if (!res.ok) {
-    throw new Error(data.message || `Request failed: ${res.status} ${res.statusText}`);
+
+  // Try to parse JSON, fall back to raw text if parsing fails
+  let data: any = {};
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      data = { message: text };
+    }
   }
+
+  if (!res.ok) {
+    // Provide helpful error with body (either parsed JSON or raw text)
+    const msg = data?.message || data?.error || text || `Request failed: ${res.status} ${res.statusText}`;
+    throw new Error(msg);
+  }
+
   return data;
 }
 
