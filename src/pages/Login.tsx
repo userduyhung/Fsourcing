@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import authService from '../services/authService';
+import { buyerService } from '../services/buyerService';
 import { logger } from '../utils/logger';
 // DebugLogger removed - use console.log for debugging
 import Toast from '../components/Toast';
@@ -86,8 +87,8 @@ const Login: React.FC = () => {
 
         showSuccess('Đăng nhập thành công!');
 
-        // Store common data
-        localStorage.setItem('userName', response.user.fullName || response.user.email);
+        // Store common data - prefer fullName; do not fall back to email for display name
+        localStorage.setItem('userName', response.user.fullName || 'Người dùng');
         localStorage.setItem('userRole', role ?? '');
 
         logger.debug('Login', 'stored user info', { userName: response.user.fullName || response.user.email, role });
@@ -100,18 +101,39 @@ const Login: React.FC = () => {
           setTimeout(() => navigate('/admin/dashboard'), 1000);
         } else if (role === 'buyer') {
           logger.info('Login', 'redirecting to home for buyer');
+          // Save buyer token first
+          localStorage.setItem('buyerToken', token);
+
+          // Try to fetch buyer profile from API to get authoritative name/company/phone
+          let profileData: any = {};
+          try {
+            profileData = await buyerService.getProfile();
+            logger.debug('Login', 'buyerService.getProfile returned', profileData);
+          } catch (profileErr) {
+            logger.warn('Login', 'Failed to fetch buyer profile, falling back to login response', profileErr);
+          }
+
+          // Determine display name preferring profile.name then response.user.fullName; do NOT fallback to email
+          const displayName = (profileData && profileData.name && profileData.name.trim() !== '')
+            ? profileData.name.trim()
+            : ((response.user.fullName && response.user.fullName.trim() !== '' && !response.user.fullName.includes('@')) ? response.user.fullName.trim() : 'Buyer');
+
           const buyerProfile = {
             id: response.user.id,
-            fullName: response.user.fullName,
-            company: response.user.company,
+            fullName: displayName || '',
+            company: profileData?.companyName || response.user.company || '',
             email: response.user.email,
-            phone: response.user.phone,
-            country: response.user.country,
-            joinDate: response.user.joinDate || new Date().toISOString()
+            phone: profileData?.phone || response.user.phone || '',
+            country: profileData?.country || response.user.country || '',
+            joinDate: response.user.joinDate || new Date().toISOString(),
+            address: profileData?.address || ''
           };
-          logger.debug('Login', 'buyer profile prepared', { buyerId: buyerProfile.id });
-          localStorage.setItem('buyerToken', token);
+
+          logger.debug('Login', 'buyer profile prepared', { buyerId: buyerProfile.id, displayName });
+          // Persist buyer profile and displayName
           localStorage.setItem('buyerProfile', JSON.stringify(buyerProfile));
+          localStorage.setItem('userName', displayName || 'Buyer');
+
           window.dispatchEvent(new Event('userLoggedIn'));
           setTimeout(() => navigateAfterLogin(fromLocation), 1000);
         } else if (role === 'seller') {

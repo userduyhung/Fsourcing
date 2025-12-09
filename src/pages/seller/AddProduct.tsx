@@ -45,6 +45,7 @@ const AddProduct: React.FC = () => {
   const categories = [
     'Bia, nước giải khát',
     'Bánh kẹo, trà, cà phê',
+    'Gói mì, gói phở',
     'Thực phẩm khô, gia vị',
     'Chăm sóc cá nhân',
     'Sữa và Sản phẩm từ sữa'

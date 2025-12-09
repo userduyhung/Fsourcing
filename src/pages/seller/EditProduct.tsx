@@ -392,11 +392,12 @@ const EditProduct: React.FC<{ productId: string }> = ({ productId }) => {
                 <option value="">-- Chọn danh mục --</option>
                 <option value="Bia, nước giải khát">Bia, nước giải khát</option>
                 <option value="Bánh kẹo, trà, cà phê">Bánh kẹo, trà, cà phê</option>
+                <option value="Gói mì, gói phở">Gói mì, gói phở</option>
                 <option value="Thực phẩm khô, gia vị">Thực phẩm khô, gia vị</option>
                 <option value="Chăm sóc cá nhân">Chăm sóc cá nhân</option>
                 <option value="Sữa và Sản phẩm từ sữa">Sữa và Sản phẩm từ sữa</option>
               </select>
-              <p className="text-xs text-gray-500 mt-1">Chọn 1 trong 5 danh mục cố định</p>
+              <p className="text-xs text-gray-500 mt-1">Chọn 1 trong danh mục cố định</p>
             </div>
 
             <div>

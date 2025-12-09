@@ -269,7 +269,8 @@ const SellerProfile: React.FC = () => {
       };
 
       logger.info('SellerProfile', '💾 Saving profile to backend', { payload: apiPayload });
-      const response = await apiClient.client.post('/Profile/seller', apiPayload);
+      // Use PUT to update seller profile. Backend expects PUT on /profile/seller for updates.
+      const response = await apiClient.client.put('/Profile/seller', apiPayload);
       logger.info('SellerProfile', '✅ Profile saved successfully', { response: response?.data });
       
       // Also persist locally for offline access

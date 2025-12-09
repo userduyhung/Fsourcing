@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   User, 
   Mail, 
@@ -60,6 +60,9 @@ const BuyerProfile: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isFirstLogin = (location.state as any)?.isFirstLogin;
 
   // ✅ Fetch profile from API on mount
   useEffect(() => {
@@ -189,7 +192,8 @@ const BuyerProfile: React.FC = () => {
       Name: profileData.fullName.trim(),
       CompanyName: profileData.company?.trim() || undefined,
       Country: profileData.country?.trim() || undefined,
-      Phone: profileData.phone?.trim() || undefined
+      Phone: profileData.phone?.trim() || undefined,
+      Address: profileData.address?.trim() || undefined
     };
 
     logger.info('BuyerProfile', '✏️ Saving profile changes...');
@@ -212,7 +216,8 @@ const BuyerProfile: React.FC = () => {
           fullName: dto.Name,
           company: dto.CompanyName || '',
           country: dto.Country || '',
-          phone: dto.Phone || ''
+          phone: dto.Phone || '',
+          address: dto.Address || prev.address || ''
         }));
 
         // Sync changes to localStorage so BuyerLayout shows updated name
@@ -224,6 +229,7 @@ const BuyerProfile: React.FC = () => {
             buyerProfile.company = dto.CompanyName || '';
             buyerProfile.phone = dto.Phone || '';
             buyerProfile.country = dto.Country || '';
+            buyerProfile.address = dto.Address || buyerProfile.address || '';
             localStorage.setItem('buyerProfile', JSON.stringify(buyerProfile));
             
             // Dispatch event để UserMenu và các component khác re-render
@@ -238,6 +244,13 @@ const BuyerProfile: React.FC = () => {
         setIsLoading(false);
         setIsEditing(false);
         setShowSuccess(true);
+        // If user just registered and completed profile, redirect to home after short delay
+        if (isFirstLogin) {
+          setTimeout(() => {
+            try { window.dispatchEvent(new Event('userProfileUpdated')); } catch {}
+            navigate('/');
+          }, 1200);
+        }
         // Hide success message after 3 seconds
         setTimeout(() => setShowSuccess(false), 3000);
       })

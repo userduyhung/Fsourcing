@@ -117,9 +117,17 @@ function App() {
             console.log('📦 App.tsx: profile.name =', profile.name);
             
             if (profile && (profile.fullName || profile.name)) {
-              const displayName = profile.fullName || profile.name || 'Buyer';
-              console.log('✅ App.tsx: Setting user from buyerProfile:', displayName);
-              setUser({ name: displayName, role: 'buyer' });
+              // Ignore values that are clearly emails (avoid showing email as display name)
+              const isEmailLike = (val: any) => typeof val === 'string' && /\S+@\S+\.\S+/.test(val);
+              const rawFull = profile.fullName || profile.name || '';
+              const displayName = isEmailLike(rawFull) ? '' : rawFull;
+              if (displayName) {
+                console.log('✅ App.tsx: Setting user from buyerProfile:', displayName);
+                setUser({ name: displayName, role: 'buyer' });
+                return;
+              } else {
+                console.warn('⚠️ App.tsx: buyerProfile fullName looks like an email or is empty; ignoring for display');
+              }
               return;
             } else {
               console.warn('⚠️ App.tsx: buyerProfile exists but no fullName or name found');

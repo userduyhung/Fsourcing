@@ -1,17 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, User, Building, Phone, Globe } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import authService from '../../services/authService';
 import Toast from '../../components/Toast';
 import { useApiToast } from '../../hooks/useApiToast';
 
 const BuyerRegister: React.FC = () => {
   const [formData, setFormData] = useState({
-    fullName: '',
-    company: '',
     email: '',
-    phone: '',
-    country: 'Vietnam',
     password: '',
     confirmPassword: ''
   });
@@ -23,34 +19,24 @@ const BuyerRegister: React.FC = () => {
   const { toast, showLoading, showSuccess, showError, hideToast } = useApiToast();
   const navigate = useNavigate();
 
-  const countries = [
-    'Vietnam', 'United States', 'China', 'Japan', 'South Korea', 'Singapore', 
-    'Thailand', 'Malaysia', 'Indonesia', 'Philippines', 'India', 'Australia'
-  ];
-
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
 
-    if (!formData.fullName.trim()) newErrors.fullName = 'Họ tên không được để trống';
-    // Company is optional
-    if (!formData.email.trim()) {
+    if (!formData.email || !formData.email.trim()) {
       newErrors.email = 'Email không được để trống';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email không hợp lệ';
     }
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Số điện thoại không được để trống';
-    } else {
-      const digits = formData.phone.replace(/\D/g, '');
-      if (digits.length !== 10) newErrors.phone = 'Số điện thoại phải là 10 chữ số';
-    }
-    if (!formData.country) newErrors.country = 'Quốc gia không được để trống';
+
     if (!formData.password) {
       newErrors.password = 'Mật khẩu không được để trống';
     } else if (formData.password.length < 6) {
       newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
     }
-    if (formData.password !== formData.confirmPassword) {
+
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Vui lòng nhập lại mật khẩu để xác nhận';
+    } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Mật khẩu không khớp';
     }
 
@@ -68,13 +54,10 @@ const BuyerRegister: React.FC = () => {
 
     try {
       // Call real API
+      // Only send backend-required fields: email, password, role
       const response = await authService.register({
         email: formData.email,
         password: formData.password,
-        fullName: formData.fullName,
-        company: formData.company,
-        phone: formData.phone,
-        country: formData.country,
         role: 'buyer'
       });
 
@@ -90,13 +73,13 @@ const BuyerRegister: React.FC = () => {
         // Store credentials temporarily for auto-fill on login page
         sessionStorage.setItem('registeredEmail', formData.email);
         sessionStorage.setItem('registeredPassword', formData.password);
-        // Also store full name so login can show the correct display name if backend doesn't return it immediately
-        sessionStorage.setItem('registeredFullName', formData.fullName);
+        // Mark as just registered (buyer) so LoginPage can redirect/prefill consistently
+        try { sessionStorage.setItem('justRegistered', 'buyer'); } catch {}
 
-        // Wait 5 seconds before redirecting to login
+        // Redirect to login shortly after registration (prefill credentials)
         setTimeout(() => {
           navigate('/login');
-        }, 5000);
+        }, 900);
       } else {
         showError(response.message || 'Đăng ký thất bại. Vui lòng thử lại.');
         setErrors({ email: response.message || 'Đăng ký thất bại. Vui lòng thử lại.' });
@@ -114,18 +97,9 @@ const BuyerRegister: React.FC = () => {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target as HTMLInputElement;
-    // Live-format phone: keep digits only, limit to 10
-    if (name === 'phone') {
-      const digits = value.replace(/\D/g, '').slice(0, 10);
-      setFormData(prev => ({ ...prev, phone: digits }));
-      if (errors.phone) setErrors(prev => ({ ...prev, phone: '' }));
-      return;
-    }
-
     setFormData(prev => ({ ...prev, [name]: value }));
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -179,44 +153,6 @@ const BuyerRegister: React.FC = () => {
             </div>
           )}
           <div className="space-y-4">
-            {/* Full Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 font-body">Họ và tên</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  name="fullName"
-                  type="text"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-body ${
-                    errors.fullName ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="Nhập họ và tên"
-                />
-              </div>
-              {errors.fullName && <p className="text-red-500 text-xs mt-1 font-body">{errors.fullName}</p>}
-            </div>
-
-            {/* Company */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 font-body">Tên công ty <span className="text-gray-400 text-xs">(tùy chọn)</span></label>
-              <div className="relative">
-                <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  name="company"
-                  type="text"
-                  value={formData.company}
-                  onChange={handleChange}
-                  className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-body ${
-                    errors.company ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="Nhập tên công ty"
-                />
-              </div>
-              {errors.company && <p className="text-red-500 text-xs mt-1 font-body">{errors.company}</p>}
-            </div>
-
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1 font-body">Email</label>
@@ -234,51 +170,6 @@ const BuyerRegister: React.FC = () => {
                 />
               </div>
               {errors.email && <p className="text-red-500 text-xs mt-1 font-body">{errors.email}</p>}
-            </div>
-
-            {/* Phone */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 font-body">Số điện thoại</label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  name="phone"
-                  type="tel"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={10}
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-body ${
-                    errors.phone ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="0xxxxxxxxx"
-                />
-              </div>
-              {errors.phone && <p className="text-red-500 text-xs mt-1 font-body">{errors.phone}</p>}
-              {!errors.phone && <p className="text-gray-500 text-xs mt-1 font-body">Nhập 10 chữ số, ví dụ: 0912345678</p>}
-            </div>
-
-            {/* Country */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 font-body">Quốc gia</label>
-              <div className="relative">
-                <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <select
-                  name="country"
-                  value={formData.country}
-                  onChange={handleChange}
-                  className={`w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-body ${
-                    errors.country ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                >
-                  <option value="">Chọn quốc gia</option>
-                  {countries.map(country => (
-                    <option key={country} value={country}>{country}</option>
-                  ))}
-                </select>
-              </div>
-              {errors.country && <p className="text-red-500 text-xs mt-1 font-body">{errors.country}</p>}
             </div>
 
             {/* Password */}

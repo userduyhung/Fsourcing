@@ -190,12 +190,16 @@ const SellerDashboard: React.FC = () => {
   const sellerName = sellerProfile?.companyName || sellerProfile?.company || sellerProfile?.legalRepresentative || sellerProfile?.fullName || 'Seller';
 
   // Normalize email from possible backend shapes / casing
-  const email =
+  const email = (
     sellerProfile?.email ||
     sellerProfile?.Email ||
     sellerProfile?.emailAddress ||
+    // some backends nest user inside profile
+    (sellerProfile as any)?.user?.email ||
     sellerProfile?.contact?.email ||
     sellerProfile?.contactEmail ||
+    // contacts array
+    (Array.isArray((sellerProfile as any)?.contacts) && (sellerProfile as any).contacts[0]?.email) ||
     localStorage.getItem('userEmail') ||
     (() => {
       // Try sellerProfile stored in localStorage (older flows)
@@ -203,11 +207,14 @@ const SellerDashboard: React.FC = () => {
         const sp = localStorage.getItem('sellerProfile');
         if (!sp) return '';
         const parsed = JSON.parse(sp);
-        return parsed?.email || parsed?.Email || parsed?.emailAddress || '';
+        return (
+          parsed?.email || parsed?.Email || parsed?.emailAddress || parsed?.user?.email || parsed?.contact?.email || ''
+        );
       } catch {
         return '';
       }
-    })();
+    })()
+  );
   const productsCount = products.length;
 
   // Show loading state

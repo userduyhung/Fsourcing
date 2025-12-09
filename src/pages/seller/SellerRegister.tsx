@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, User, Building2, FileText, Globe } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
 import authService from '../../services/authService';
 import Toast from '../../components/Toast';
 import { useApiToast } from '../../hooks/useApiToast';
@@ -10,18 +10,9 @@ const SellerRegister: React.FC = () => {
   // Step 1: Account Registration
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   
-  // Step 2: Seller Profile (Required fields)
-  const [companyName, setCompanyName] = useState('');
-  const [legalRepresentative, setLegalRepresentative] = useState('');
-  const [taxId, setTaxId] = useState('');
-  const [country, setCountry] = useState('');
-  
-  // Step 2: Seller Profile (Optional fields)
-  const [industry, setIndustry] = useState('');
-  const [description, setDescription] = useState('');
-  const [website, setWebsite] = useState('');
-  const [city, setCity] = useState('');
+  // Registration only requires email/password per backend RegisterRequest
   
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -29,10 +20,7 @@ const SellerRegister: React.FC = () => {
   const { toast, showLoading, showSuccess, showError, hideToast } = useApiToast();
   const navigate = useNavigate();
 
-  const countries = [
-    'Vietnam', 'United States', 'China', 'Japan', 'South Korea', 'Singapore',
-    'Thailand', 'Malaysia', 'Indonesia', 'Philippines', 'India', 'Australia'
-  ];
+  // registration-only form; company profile filled later
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,23 +45,19 @@ const SellerRegister: React.FC = () => {
       return;
     }
 
-    // Validate Step 2: Required Seller Profile fields
-    if (!companyName.trim()) {
-      setError('Vui lòng nhập tên công ty.');
+    // Validate confirm password
+    if (confirmPassword.length === 0) {
+      setError('Vui lòng nhập lại mật khẩu để xác nhận.');
       return;
     }
-    if (!legalRepresentative.trim()) {
-      setError('Vui lòng nhập tên người đại diện pháp luật.');
+
+    if (password !== confirmPassword) {
+      setError('Mật khẩu và xác nhận mật khẩu không khớp.');
       return;
     }
-    if (!taxId.trim()) {
-      setError('Vui lòng nhập mã số thuế.');
-      return;
-    }
-    if (!country) {
-      setError('Vui lòng chọn quốc gia.');
-      return;
-    }
+
+    // Registration now only validates account credentials; company profile
+    // will be filled on the SellerProfile page after registration.
 
     setIsLoading(true);
     showLoading('Đang đăng ký Seller...');
@@ -101,23 +85,37 @@ const SellerRegister: React.FC = () => {
           localStorage.setItem('token', token);
           localStorage.setItem('authToken', token);
         }
-        localStorage.setItem('userName', email);
+        // Do not store the raw email as the display name. The header should show
+        // the user's full name when available (after profile completion).
         localStorage.setItem('role', 'seller');
         localStorage.setItem('userRole', 'seller');
         if (registeredId) {
           localStorage.setItem('userId', String(registeredId));
         }
 
-        // Show success message
-        setShowSuccessToast(true);
-        showSuccess('Đăng ký Seller thành công! Đang chuyển đến trang chỉnh sửa hồ sơ...');
+        // Persist registered email/password briefly so other pages can prefill
+        try {
+          sessionStorage.setItem('registeredEmail', email.trim());
+          sessionStorage.setItem('registeredPassword', password);
+        } catch (e) {
+          // ignore
+        }
 
-        // Redirect to profile edit page immediately
+        // Show success message and redirect to profile page so user can
+        // complete company information (profile is required for sellers).
+        setShowSuccessToast(true);
+        showSuccess('Đăng ký thành công! Vui lòng đăng nhập để hoàn tất hồ sơ doanh nghiệp.');
+
+        // Mark that the user has just registered so LoginPage can redirect to profile after login
+        try {
+          sessionStorage.setItem('justRegistered', 'seller');
+        } catch (e) {
+          // ignore
+        }
+
         setTimeout(() => {
-          navigate('/seller/profile', { 
-            state: { isFirstLogin: true, message: 'Chào mừng! Vui lòng điền đầy đủ thông tin hồ sơ để hoàn thành đăng ký.' } 
-          });
-        }, 2000);
+          navigate('/seller/login');
+        }, 900);
       } else {
         showError(response.message || 'Đăng ký thất bại. Vui lòng thử lại.');
         setError(response.message || 'Đăng ký thất bại. Vui lòng thử lại.');
@@ -205,136 +203,24 @@ const SellerRegister: React.FC = () => {
                   />
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Step 2: Company Information */}
-          <div className="mb-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-              <span className="bg-purple-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm mr-2">2</span>
-              Thông tin công ty
-            </h3>
-            
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-gray-700 mb-2 font-semibold text-sm font-body">Tên công ty <span className="text-red-500">*</span></label>
-                  <div className="flex items-center border-2 border-gray-200 rounded-xl px-4 py-3 focus-within:border-purple-500 transition-all hover:border-gray-300">
-                    <Building2 className="w-5 h-5 text-gray-400 mr-3" />
-                    <input 
-                      type="text" 
-                      value={companyName} 
-                      onChange={e => setCompanyName(e.target.value)} 
-                      className="w-full outline-none font-body" 
-                      placeholder="Tên công ty" 
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-gray-700 mb-2 font-semibold text-sm font-body">Người đại diện pháp luật <span className="text-red-500">*</span></label>
-                  <div className="flex items-center border-2 border-gray-200 rounded-xl px-4 py-3 focus-within:border-purple-500 transition-all hover:border-gray-300">
-                    <User className="w-5 h-5 text-gray-400 mr-3" />
-                    <input 
-                      type="text" 
-                      value={legalRepresentative} 
-                      onChange={e => setLegalRepresentative(e.target.value)} 
-                      className="w-full outline-none font-body" 
-                      placeholder="Họ và tên" 
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-gray-700 mb-2 font-semibold text-sm font-body">Mã số thuế <span className="text-red-500">*</span></label>
-                  <div className="flex items-center border-2 border-gray-200 rounded-xl px-4 py-3 focus-within:border-purple-500 transition-all hover:border-gray-300">
-                    <FileText className="w-5 h-5 text-gray-400 mr-3" />
-                    <input 
-                      type="text" 
-                      value={taxId} 
-                      onChange={e => setTaxId(e.target.value)} 
-                      className="w-full outline-none font-body" 
-                      placeholder="MST/Tax ID" 
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-gray-700 mb-2 font-semibold text-sm font-body">Quốc gia <span className="text-red-500">*</span></label>
-                  <div className="flex items-center border-2 border-gray-200 rounded-xl px-4 py-3 focus-within:border-purple-500 transition-all hover:border-gray-300">
-                    <Globe className="w-5 h-5 text-gray-400 mr-3" />
-                    <select 
-                      value={country} 
-                      onChange={e => setCountry(e.target.value)} 
-                      className="w-full outline-none font-body bg-transparent"
-                    >
-                      <option value="">Chọn quốc gia</option>
-                      {countries.map(c => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-gray-700 mb-2 font-semibold text-sm font-body">Ngành nghề (tùy chọn)</label>
-                  <div className="flex items-center border-2 border-gray-200 rounded-xl px-4 py-3 focus-within:border-purple-500 transition-all hover:border-gray-300">
-                    <Building2 className="w-5 h-5 text-gray-400 mr-3" />
-                    <input 
-                      type="text" 
-                      value={industry} 
-                      onChange={e => setIndustry(e.target.value)} 
-                      className="w-full outline-none font-body" 
-                      placeholder="Ví dụ: Thực phẩm" 
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-gray-700 mb-2 font-semibold text-sm font-body">Thành phố (tùy chọn)</label>
-                  <div className="flex items-center border-2 border-gray-200 rounded-xl px-4 py-3 focus-within:border-purple-500 transition-all hover:border-gray-300">
-                    <Globe className="w-5 h-5 text-gray-400 mr-3" />
-                    <input 
-                      type="text" 
-                      value={city} 
-                      onChange={e => setCity(e.target.value)} 
-                      className="w-full outline-none font-body" 
-                      placeholder="Tên thành phố" 
-                    />
-                  </div>
-                </div>
-              </div>
 
               <div>
-                <label className="block text-gray-700 mb-2 font-semibold text-sm font-body">Website (tùy chọn)</label>
-                <div className="flex items-center border-2 border-gray-200 rounded-xl px-4 py-3 focus-within:border-purple-500 transition-all hover:border-gray-300">
-                  <Globe className="w-5 h-5 text-gray-400 mr-3" />
-                  <input 
-                    type="url" 
-                    value={website} 
-                    onChange={e => setWebsite(e.target.value)} 
-                    className="w-full outline-none font-body" 
-                    placeholder="https://company.com" 
+                <label className="block text-gray-700 mb-2 font-semibold text-sm font-body">Nhập lại mật khẩu <span className="text-red-500">*</span></label>
+                <div className="flex items-center border-2 border-gray-200 rounded-xl px-4 py-3 focus-within:border-blue-500 transition-all hover:border-gray-300">
+                  <Lock className="w-5 h-5 text-gray-400 mr-3" />
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    className="w-full outline-none font-body"
+                    placeholder="Nhập lại mật khẩu"
                   />
                 </div>
               </div>
-
-              <div>
-                <label className="block text-gray-700 mb-2 font-semibold text-sm font-body">Mô tả công ty (tùy chọn)</label>
-                <textarea 
-                  value={description} 
-                  onChange={e => setDescription(e.target.value)} 
-                  rows={3}
-                  className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-purple-500 transition-all hover:border-gray-300 font-body" 
-                  placeholder="Giới thiệu ngắn về công ty..."
-                />
-              </div>
             </div>
           </div>
+
+          {/* Company profile is filled on the SellerProfile page after registration */}
 
           <button 
             type="submit" 

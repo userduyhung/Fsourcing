@@ -8,6 +8,7 @@ import apiClient from '../services/apiClient';
 const FIXED_CATEGORIES = [
   'Bia, nước giải khát',
   'Bánh kẹo, trà, cà phê',
+  'Gói mì, gói phở',
   'Thực phẩm khô, gia vị',
   'Chăm sóc cá nhân',
   'Sữa và Sản phẩm từ sữa'

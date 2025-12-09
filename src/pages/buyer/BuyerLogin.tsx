@@ -102,11 +102,11 @@ const BuyerLogin: React.FC = () => {
           
           logger.info('BuyerLogin', '💾 Determined fullName to save:', fullNameToSave || '(empty - user needs to set name)');
           
-          // Save to localStorage - use actual name or empty string (not email)
-          localStorage.setItem('userName', fullNameToSave || response.user.email || 'Buyer');
+          // Save to localStorage - prefer profile.name or response.user.fullName; do not fallback to email
+          localStorage.setItem('userName', fullNameToSave || 'Buyer');
           localStorage.setItem('buyerProfile', JSON.stringify({
             id: response.user.id,
-            fullName: fullNameToSave,
+            fullName: fullNameToSave || '',
             company: profile.companyName || response.user.company || '',
             email: response.user.email,
             phone: profile.phone || response.user.phone || '',
@@ -129,15 +129,15 @@ const BuyerLogin: React.FC = () => {
           logger.warn('BuyerLogin', '⚠️ Failed to fetch profile, using login response data', profileError);
           
           // Fallback to login response if profile fetch fails
-          // DO NOT use email as fullName
-          const fallbackName = (response.user.fullName && !response.user.fullName.includes('@')) 
-            ? response.user.fullName 
+          // Prefer response.user.fullName (when not an email); otherwise default to 'Buyer'
+          const fallbackName = (response.user.fullName && !response.user.fullName.includes('@'))
+            ? response.user.fullName
             : '';
-          
-          localStorage.setItem('userName', fallbackName || response.user.email || 'Buyer');
+
+          localStorage.setItem('userName', fallbackName || 'Buyer');
           localStorage.setItem('buyerProfile', JSON.stringify({
             id: response.user.id,
-            fullName: fallbackName,
+            fullName: fallbackName || '',
             company: response.user.company || '',
             email: response.user.email,
             phone: response.user.phone || '',

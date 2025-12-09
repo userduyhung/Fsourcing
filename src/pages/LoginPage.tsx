@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import authService from '../services/authService';
+import { buyerService } from '../services/buyerService';
 
 const LoginPage: React.FC = () => {
   const [role, setRole] = useState<'buyer' | 'seller'>('buyer');
@@ -12,6 +13,25 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const redirectTo = (location.state as any)?.from?.pathname || '/';
+
+  useEffect(() => {
+    // Prefill credentials if user just registered
+    try {
+      const justRegistered = sessionStorage.getItem('justRegistered');
+      const regEmail = sessionStorage.getItem('registeredEmail');
+      const regPassword = sessionStorage.getItem('registeredPassword');
+      if (justRegistered === 'seller' && regEmail) {
+        setRole('seller');
+        setFormData({ email: regEmail, password: regPassword || '' });
+      } else if (justRegistered === 'buyer' && regEmail) {
+        // buyer is default role but prefill credentials
+        setRole('buyer');
+        setFormData({ email: regEmail, password: regPassword || '' });
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
 
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
@@ -42,42 +62,126 @@ const LoginPage: React.FC = () => {
         const roleFromResp = (roleFromRespRaw || role || '').toString().toLowerCase();
         const token = resp.token || '';
 
-        // Determine display name: prefer fullName from response, then registeredFullName (from recent register), then email
+        // Determine display name: prefer fullName from response, then registeredFullName (from recent register).
+        // Do NOT fall back to the user's email — avoid showing email as the display name in the header.
         const registeredFullName = sessionStorage.getItem('registeredFullName') || '';
-        const displayName = resp.user.fullName || registeredFullName || resp.user.email || formData.email;
+        const displayName = resp.user.fullName || registeredFullName || '';
 
-        localStorage.setItem('userName', displayName);
+        // Ensure we always set a non-empty userName so App.tsx can detect session.
+        const fallbackName = roleFromResp === 'buyer' ? 'Buyer' : roleFromResp === 'seller' ? 'Seller' : 'User';
+        localStorage.setItem('userName', displayName || fallbackName);
         localStorage.setItem('userRole', roleFromResp || 'buyer');
 
-        // Clear temporary registered data
-        sessionStorage.removeItem('registeredEmail');
-        sessionStorage.removeItem('registeredPassword');
-        sessionStorage.removeItem('registeredFullName');
+        // Decide redirects based on role and whether the user just registered
+        const justRegistered = sessionStorage.getItem('justRegistered');
 
         if (roleFromResp === 'buyer') {
           localStorage.setItem('buyerToken', token);
-          localStorage.setItem('buyerProfile', JSON.stringify({
-            id: resp.user.id,
-            fullName: resp.user.fullName || displayName,
-            company: resp.user.company,
-            email: resp.user.email,
-            phone: resp.user.phone,
-            country: resp.user.country,
-            joinDate: resp.user.joinDate || new Date().toISOString()
-          }));
+          // Attempt to fetch buyer profile to obtain authoritative name
+          try {
+            const profile = await buyerService.getProfile();
+            const fullName = profile?.name && profile.name.trim() !== '' ? profile.name.trim() : (resp.user.fullName && !resp.user.fullName.includes('@') ? resp.user.fullName.trim() : '');
+            localStorage.setItem('buyerProfile', JSON.stringify({
+              id: resp.user.id,
+              fullName: fullName || '',
+              company: profile?.companyName || resp.user.company || '',
+              email: resp.user.email,
+              phone: profile?.phone || resp.user.phone || '',
+              country: profile?.country || resp.user.country || '',
+              joinDate: resp.user.joinDate || new Date().toISOString()
+            }));
+            localStorage.setItem('userName', fullName || 'Buyer');
+          } catch (err) {
+            // If profile fetch fails, fall back to response.fullName if it's not an email, else role fallback
+            const fallback = (resp.user.fullName && !resp.user.fullName.includes('@')) ? resp.user.fullName : 'Buyer';
+            localStorage.setItem('buyerProfile', JSON.stringify({
+              id: resp.user.id,
+              fullName: (resp.user.fullName && !resp.user.fullName.includes('@')) ? resp.user.fullName : '',
+              company: resp.user.company,
+              email: resp.user.email,
+              phone: resp.user.phone,
+              country: resp.user.country,
+              joinDate: resp.user.joinDate || new Date().toISOString()
+            }));
+            localStorage.setItem('userName', fallback);
+          }
           window.dispatchEvent(new Event('userLoggedIn'));
-          navigate(redirectTo);
+          // If user just registered as buyer, redirect to buyer profile to complete it
+          const justRegistered = sessionStorage.getItem('justRegistered');
+          if (justRegistered === 'buyer') {
+            // cleanup temp data
+            sessionStorage.removeItem('registeredEmail');
+            sessionStorage.removeItem('registeredPassword');
+            sessionStorage.removeItem('registeredFullName');
+            sessionStorage.removeItem('justRegistered');
+            try { localStorage.setItem('userEmail', resp.user.email || formData.email); } catch {}
+            setIsLoading(false);
+            navigate('/buyer/profile', { state: { isFirstLogin: true } });
+          } else {
+            // clean up any registration temp data
+            sessionStorage.removeItem('registeredEmail');
+            sessionStorage.removeItem('registeredPassword');
+            sessionStorage.removeItem('registeredFullName');
+            sessionStorage.removeItem('justRegistered');
+            // persist email for older dashboard flows
+            try { localStorage.setItem('userEmail', resp.user.email || formData.email); } catch {}
+            navigate(redirectTo);
+          }
         } else if (roleFromResp === 'seller') {
           localStorage.setItem('sellerToken', token);
-          localStorage.setItem('sellerProfile', JSON.stringify(resp.user));
+          // Try to fetch seller profile to get authoritative company/contact name
+          try {
+            const sellerResp = await (await import('../services/apiClient')).default.client.get('/Profile/seller');
+            const data = sellerResp?.data?.data || {};
+            const companyName = data.companyName || data.CompanyName || resp.user.company || resp.user.fullName || '';
+            const contactName = data.contactName || data.ContactName || resp.user.fullName || '';
+            const normalized = {
+              id: resp.user.id,
+              companyName,
+              contactName,
+              fullName: resp.user.fullName || '',
+              email: resp.user.email,
+              phone: data.phone || data.Phone || resp.user.phone || '',
+              country: data.country || data.Country || resp.user.country || '',
+              address: data.address || data.Address || ''
+            };
+            localStorage.setItem('sellerProfile', JSON.stringify(normalized));
+            // Prefer company name for header, fall back to contactName
+            const sellerDisplay = companyName || contactName || 'Seller';
+            localStorage.setItem('userName', sellerDisplay);
+          } catch (err) {
+            // fallback to response.user values if profile fetch fails
+            const fallbackCompany = resp.user.company || resp.user.fullName || '';
+            const normalized = {
+              id: resp.user.id,
+              companyName: fallbackCompany,
+              contactName: resp.user.fullName || '',
+              fullName: resp.user.fullName || '',
+              email: resp.user.email,
+              phone: resp.user.phone,
+              country: resp.user.country,
+              address: ''
+            };
+            localStorage.setItem('sellerProfile', JSON.stringify(normalized));
+            localStorage.setItem('userName', fallbackCompany || 'Seller');
+          }
           // One-time redirect for sellers: if not yet redirected, send to add-product
           const firstSellerRedirect = localStorage.getItem('sellerFirstLoginRedirectDone');
           window.dispatchEvent(new Event('userLoggedIn'));
           setIsLoading(false);
-          if (!firstSellerRedirect) {
+          // If the user just registered as a seller, send them to profile to complete company info
+          if (justRegistered === 'seller') {
+            sessionStorage.removeItem('registeredEmail');
+            sessionStorage.removeItem('registeredPassword');
+            sessionStorage.removeItem('registeredFullName');
+            sessionStorage.removeItem('justRegistered');
+            try { localStorage.setItem('userEmail', resp.user.email || formData.email); } catch {}
+            navigate('/seller/profile', { state: { isFirstLogin: true } });
+          } else if (!firstSellerRedirect) {
             localStorage.setItem('sellerFirstLoginRedirectDone', '1');
             navigate('/seller/add-product');
           } else {
+            try { localStorage.setItem('userEmail', resp.user.email || formData.email); } catch {}
             navigate(redirectTo);
           }
         } else if (roleFromResp === 'admin') {
