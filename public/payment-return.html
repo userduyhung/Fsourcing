@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Payment Return</title>
+    <script>
+      // Redirect to root while preserving query string so the SPA can handle it.
+      (function(){
+        try {
+          var qs = window.location.search || '';
+          // Redirect to root with original query so client-side router can detect vnp_ params
+          window.location.replace('/' + qs);
+        } catch (e) {
+          // fallback: go to home
+          window.location.replace('/');
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    Redirecting...
+  </body>
+</html>
