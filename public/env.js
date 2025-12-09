@@ -1,10 +1,21 @@
-// Optional runtime configuration for the frontend.
-// Create or edit this file on the server (served at /env.js) to point the frontend
-// to the correct backend API without rebuilding.
-// Example (uncomment and set the correct backend URL):
-// window.__API_BASE = 'https://api.yourdomain.com/api';
+// Runtime config injected at deploy-time.
+// Copy this file to your production server as `/env.js` (served at site root)
+// to override the API base URL at runtime without rebuilding the bundle.
+// Backend URL provided by you:
+// https://uni-b2b-fixed-production.up.railway.app/
 
-// You can also provide multiple runtime env values as an object:
-// window.__ENV = { VITE_API_BASE: 'https://api.yourdomain.com/api' };
+// NOTE: The frontend previously used a relative '/api' base, which caused
+// requests like `https://fsourcing.vercel.app/api/...` and 404s on production.
+// To ensure the frontend calls your Railway backend, we set the runtime
+// variables below. `VITE_API_BASE_URL` includes the '/api' prefix because
+// the app's axios client uses '/api' as the default base in many places.
 
-// Default: leave commented to use the built-in environment or relative '/api'.
+(function () {
+	window.__ENV = window.__ENV || {};
+	// Prefer VITE_API_BASE_URL (used first by runtime resolver)
+	window.__ENV.VITE_API_BASE_URL = 'https://uni-b2b-fixed-production.up.railway.app/api';
+	// Also provide the non-/api base for modules that expect it
+	window.__ENV.VITE_API_BASE = 'https://uni-b2b-fixed-production.up.railway.app';
+	// Direct override used by axios client code
+	window.__API_BASE = window.__API_BASE || window.__ENV.VITE_API_BASE_URL;
+})();
