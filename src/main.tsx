@@ -30,6 +30,16 @@ try {
   // ignore errors
 }
 
+// Runtime diagnostics: print any runtime-injected env values so deployments are easier to debug
+try {
+  // eslint-disable-next-line no-console
+  console.debug('Runtime env check:', {
+    __API_BASE: (window as any).__API_BASE,
+    __ENV: (window as any).__ENV,
+    location: { href: window.location.href }
+  });
+} catch (e) {}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

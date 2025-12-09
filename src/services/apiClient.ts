@@ -4,10 +4,35 @@ import createGeneratedApi, { RequestFn } from './api-client.generated';
 function getRuntimeApiBase() {
   try {
     const win = window as any;
-    if (win && win.__API_BASE) return win.__API_BASE;
-    if (win && win.__ENV && win.__ENV.VITE_API_BASE) return win.__ENV.VITE_API_BASE;
-  } catch (e) {}
-  return import.meta.env.VITE_API_BASE || 'https://uni-b2b-fixed-production.up.railway.app/api';
+    // 1) explicit runtime override
+    if (win && win.__API_BASE) {
+      console.info('[apiClient] using window.__API_BASE (runtime) ->', win.__API_BASE);
+      return win.__API_BASE;
+    }
+    // 2) runtime env.js keys (support both VITE_API_BASE_URL and VITE_API_BASE)
+    if (win && win.__ENV && win.__ENV.VITE_API_BASE_URL) {
+      console.info('[apiClient] using window.__ENV.VITE_API_BASE_URL (runtime) ->', win.__ENV.VITE_API_BASE_URL);
+      return win.__ENV.VITE_API_BASE_URL;
+    }
+    if (win && win.__ENV && win.__ENV.VITE_API_BASE) {
+      console.info('[apiClient] using window.__ENV.VITE_API_BASE (runtime) ->', win.__ENV.VITE_API_BASE);
+      return win.__ENV.VITE_API_BASE;
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  // 3) build-time envs
+  const buildApi = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE;
+  if (buildApi) {
+    console.info('[apiClient] using build-time API base ->', buildApi);
+    return buildApi;
+  }
+
+  // 4) final fallback
+  const fallback = 'https://uni-b2b-fixed-production.up.railway.app/api';
+  console.warn('[apiClient] No runtime or build API base found, using fallback ->', fallback);
+  return fallback;
 }
 
 const API_BASE = getRuntimeApiBase();
