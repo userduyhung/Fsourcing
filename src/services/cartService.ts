@@ -7,7 +7,14 @@ import { logger } from '../utils/logger';
 // Keep these for future use when backend is ready
 // During development prefer relative '/api' so Vite dev proxy handles requests
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+const API_BASE = (function() {
+  try {
+    const win = window as any;
+    if (win && win.__API_BASE) return win.__API_BASE;
+    if (win && win.__ENV && win.__ENV.VITE_API_BASE) return win.__ENV.VITE_API_BASE;
+  } catch (e) {}
+  return import.meta.env.VITE_API_BASE || '/api';
+})();
 
 // GUID validation helper
 function isValidGuid(id: string): boolean {

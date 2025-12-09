@@ -1,11 +1,25 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { logger } from '../utils/logger';
 
+// Resolve API base at runtime. Priority:
+// 1. `window.__API_BASE` (injected by host at runtime)
+// 2. `window.__ENV?.VITE_API_BASE` (runtime env object if provided)
+// 3. `import.meta.env.VITE_API_BASE_URL` or `import.meta.env.VITE_API_BASE` (build-time)
+// 4. fallback to '/api' (relative -> let dev proxy handle it)
+function getRuntimeApiBase() {
+  try {
+    const win = window as any;
+    if (win && win.__API_BASE) return win.__API_BASE;
+    if (win && win.__ENV && win.__ENV.VITE_API_BASE) return win.__ENV.VITE_API_BASE;
+  } catch (e) {
+    // ignore
+  }
+  return import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || '/api';
+}
+
 // Tạo axios instance với config mặc định
 const axiosClient = axios.create({
-  // Prefer explicit env var when provided. During development use relative '/api' so Vite dev-server proxy handles requests
-  // This avoids direct calls to http://localhost:5000 which may be blocked by browser extensions or CORS issues.
-  baseURL: import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE || '/api',
+  baseURL: getRuntimeApiBase(),
   headers: {
     'Content-Type': 'application/json',
   },

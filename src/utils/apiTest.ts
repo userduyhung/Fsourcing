@@ -3,8 +3,15 @@
  * Dùng file này để test API endpoints trong browser console
  */
 
-// Use env var if set, otherwise use relative '/api' to let dev proxy forward requests
-const API_BASE_URL = import.meta.env.VITE_API_BASE || '/api/Auth';
+// Use runtime override if provided by host, then env var, then relative '/api'
+const API_BASE_URL = (function() {
+  try {
+    const win = window as any;
+    if (win && win.__API_BASE) return win.__API_BASE.replace(/\/$/, '') + '/Auth';
+    if (win && win.__ENV && win.__ENV.VITE_API_BASE) return win.__ENV.VITE_API_BASE.replace(/\/$/, '') + '/Auth';
+  } catch (e) {}
+  return (import.meta.env.VITE_API_BASE || '/api').replace(/\/$/, '') + '/Auth';
+})();
 
 export const testAPI = {
   /**

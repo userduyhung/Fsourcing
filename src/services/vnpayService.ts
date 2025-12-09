@@ -35,8 +35,14 @@ export async function createVNPayPayment(params: VNPayPaymentParams): Promise<VN
     }
 
     // Call backend API to create payment URL
-    // Prefer env override; default to relative '/api' so dev proxy handles requests
-    const apiBaseUrl = import.meta.env.VITE_API_BASE || '/api';
+    const apiBaseUrl = (function() {
+      try {
+        const win = window as any;
+        if (win && win.__API_BASE) return win.__API_BASE;
+        if (win && win.__ENV && win.__ENV.VITE_API_BASE) return win.__ENV.VITE_API_BASE;
+      } catch (e) {}
+      return import.meta.env.VITE_API_BASE || '/api';
+    })();
     const response = await fetch(`${apiBaseUrl}/VNPay/create-payment`, {
       method: 'POST',
       headers: {

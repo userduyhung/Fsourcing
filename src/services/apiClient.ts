@@ -1,7 +1,16 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import createGeneratedApi, { RequestFn } from './api-client.generated';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'https://uni-b2b-fixed-production.up.railway.app/api';
+function getRuntimeApiBase() {
+  try {
+    const win = window as any;
+    if (win && win.__API_BASE) return win.__API_BASE;
+    if (win && win.__ENV && win.__ENV.VITE_API_BASE) return win.__ENV.VITE_API_BASE;
+  } catch (e) {}
+  return import.meta.env.VITE_API_BASE || 'https://uni-b2b-fixed-production.up.railway.app/api';
+}
+
+const API_BASE = getRuntimeApiBase();
 
 const client: AxiosInstance = axios.create({
   baseURL: API_BASE,
