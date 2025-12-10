@@ -155,7 +155,7 @@ class EmailService {
     let html = '<div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px;">';
     
     items.forEach((item, index) => {
-      const imageUrl = item.imageUrl || 'https://via.placeholder.com/150?text=No+Image';
+      const imageUrl = item.imageUrl || 'https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg';
       
       html += `
         <table width="100%" cellpadding="0" cellspacing="0" style="background: #ffffff; margin-bottom: 10px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">

@@ -29,6 +29,7 @@ import Services from './pages/Services';
 import SuccessStories from './pages/SuccessStories';
 import CartModal from './components/CartModal';
 import ToastListener from './components/ToastListener';
+import LoadingOverlay from './components/LoadingOverlay';
 import CartPage from './pages/buyer/CartPage';
 import CheckoutPage from './pages/buyer/CheckoutPage';
 import QRPaymentPage from './pages/buyer/QRPaymentPage';
@@ -233,6 +234,7 @@ function App() {
     <Router>
       <ScrollToTop />
       <ToastListener />
+      <LoadingOverlay />
       <div className="min-h-screen bg-white">
         {/* Header */}
         <header className="bg-white border-b border-gray-200">
@@ -319,7 +321,7 @@ function App() {
                             </div>
                             <div>
                               <h3 className="text-2xl font-bold text-gray-900">🎉 Chào mừng {user.name}!</h3>
-                              <p className="text-gray-600 font-semibold">Giảm giá đến 30% cho đơn hàng đầu tiên trong tuần này!</p>
+                              <p className="text-gray-600 font-semibold">Chúc quý khách có trải nghiệm mua sắm vui vẻ</p>
                             </div>
                           </div>
                           <Link to="/products" className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-full font-bold hover:shadow-lg transform hover:scale-105 transition-all">

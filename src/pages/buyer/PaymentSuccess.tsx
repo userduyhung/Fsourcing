@@ -92,7 +92,7 @@ const PaymentSuccess: React.FC<PaymentSuccessProps> = ({ orderId, amount, transa
           quantity: item.quantity || 1,
           price: item.price || 0,
           subtotal: (item.price || 0) * (item.quantity || 1),
-          imageUrl: item.image || 'https://via.placeholder.com/150?text=No+Image'  // Ảnh sản phẩm
+          imageUrl: item.image || 'https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg'  // Ảnh sản phẩm
         }));
 
         logger.debug('PaymentSuccess', 'sending email for order', { orderId: demoOrderId, itemCount: orderItems.length });

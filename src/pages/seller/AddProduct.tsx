@@ -720,7 +720,7 @@ const AddProduct: React.FC = () => {
                         alt="Product preview"
                         className="w-full h-48 object-cover rounded-xl"
                         onError={(e) => {
-                          e.currentTarget.src = 'https://via.placeholder.com/300?text=No+Image';
+                          e.currentTarget.src = 'https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg';
                         }}
                       />
                     )}

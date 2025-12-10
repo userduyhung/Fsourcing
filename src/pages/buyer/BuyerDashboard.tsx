@@ -231,7 +231,7 @@ const BuyerDashboard: React.FC = () => {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Recent Orders */}
         <div className="lg:col-span-2 bg-white rounded-xl shadow-lg p-8 border border-gray-100">
           <div className="flex items-center justify-between mb-6">
@@ -313,89 +313,50 @@ const BuyerDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Recent Activity */}
-        <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100">
-          <h3 className="text-xl font-bold text-gray-900 mb-6">Hoạt động gần đây</h3>
-          <div className="space-y-5">
-            {recentActivity.map((activity) => (
-              <div key={activity.id} className="flex items-start space-x-4">
-                <div className="mt-1">
-                  {getActivityIcon(activity.type)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-900 font-medium">{activity.action}</p>
-                  <p className="text-xs text-gray-500">{activity.from} • {activity.time}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* Recent Activity: hidden */}
       </div>
 
       {/* Quick Actions and Popular Products */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Quick Actions */}
-        <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100">
-          <h3 className="text-xl font-bold text-gray-900 mb-6">Thao tác nhanh</h3>
-          <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-8">
+        {/* Quick Actions (horizontal row) */}
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+          <h3 className="text-xl font-bold text-gray-900 mb-4">Thao tác nhanh</h3>
+          <div className="flex items-center gap-4 overflow-x-auto py-2">
             <Link
               to="/products"
-              className="p-6 border-2 border-dashed border-blue-300 rounded-xl hover:border-blue-500 hover:bg-blue-50 text-center transition-colors shadow-sm"
+              className="flex-shrink-0 flex flex-col items-center justify-center min-w-[120px] px-4 py-3 bg-white border border-gray-100 rounded-lg hover:shadow-md transition-all"
             >
-              <ShoppingBag className="w-10 h-10 mx-auto text-blue-500 mb-2" />
-              <span className="text-base font-semibold text-gray-700">Mua sắm</span>
+              <ShoppingBag className="w-7 h-7 text-blue-500 mb-2" />
+              <span className="text-sm font-medium text-gray-700">Mua sắm</span>
             </Link>
+
             <Link
               to="/cart"
-              className="p-6 border-2 border-dashed border-green-300 rounded-xl hover:border-green-500 hover:bg-green-50 text-center transition-colors shadow-sm"
+              className="flex-shrink-0 flex flex-col items-center justify-center min-w-[120px] px-4 py-3 bg-white border border-gray-100 rounded-lg hover:shadow-md transition-all"
             >
-              <ShoppingCart className="w-10 h-10 mx-auto text-green-500 mb-2" />
-              <span className="text-base font-semibold text-gray-700">Giỏ hàng</span>
+              <ShoppingCart className="w-7 h-7 text-green-500 mb-2" />
+              <span className="text-sm font-medium text-gray-700">Giỏ hàng</span>
             </Link>
+
             <Link
               to="/buyer/orders"
-              className="p-6 border-2 border-dashed border-orange-300 rounded-xl hover:border-orange-500 hover:bg-orange-50 text-center transition-colors shadow-sm"
+              className="flex-shrink-0 flex flex-col items-center justify-center min-w-[120px] px-4 py-3 bg-white border border-gray-100 rounded-lg hover:shadow-md transition-all"
             >
-              <Package className="w-10 h-10 mx-auto text-orange-500 mb-2" />
-              <span className="text-base font-semibold text-gray-700">Đơn hàng</span>
+              <Package className="w-7 h-7 text-orange-500 mb-2" />
+              <span className="text-sm font-medium text-gray-700">Đơn hàng</span>
             </Link>
+
             <Link
               to="/buyer/profile"
-              className="p-6 border-2 border-dashed border-purple-300 rounded-xl hover:border-purple-500 hover:bg-purple-50 text-center transition-colors shadow-sm"
+              className="flex-shrink-0 flex flex-col items-center justify-center min-w-[120px] px-4 py-3 bg-white border border-gray-100 rounded-lg hover:shadow-md transition-all"
             >
-              <User className="w-10 h-10 mx-auto text-purple-500 mb-2" />
-              <span className="text-base font-semibold text-gray-700">Hồ sơ</span>
+              <User className="w-7 h-7 text-purple-500 mb-2" />
+              <span className="text-sm font-medium text-gray-700">Hồ sơ</span>
             </Link>
           </div>
         </div>
 
-        {/* Popular Products */}
-        <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-gray-900">Sản phẩm nổi bật</h3>
-            <Link to="/products" className="text-blue-600 hover:text-blue-700 text-sm font-semibold">
-              Xem tất cả →
-            </Link>
-          </div>
-          <div className="space-y-4">
-            {popularProducts.map((product) => (
-              <div key={product.id} className="flex items-center space-x-4 p-4 border border-gray-200 rounded-xl bg-gray-50 hover:bg-green-50 transition-colors">
-                <img src={product.image} alt={product.name} className="w-16 h-16 object-cover rounded-lg" />
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 text-base">{product.name}</h4>
-                  <p className="text-xs text-gray-500">{product.category}</p>
-                  <p className="text-sm text-blue-600 font-bold mt-1">{formatCurrency(product.price)}</p>
-                </div>
-                <Link
-                  to="/products"
-                  className="text-blue-600 hover:text-blue-700 text-xs font-semibold"
-                >
-                  Xem →
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* Popular Products: intentionally hidden */}
       </div>
 
       {/* Market Insights */}

@@ -488,7 +488,7 @@ const EditProduct: React.FC<{ productId: string }> = ({ productId }) => {
                     alt="Preview"
                     className="w-full max-h-64 object-contain rounded-xl border-2 border-gray-200"
                     onError={(e) => {
-                      e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Invalid+Image';
+                      e.currentTarget.src = 'https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg';
                     }}
                   />
                   {uploadedImageUrl && (

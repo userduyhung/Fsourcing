@@ -6,6 +6,7 @@ import { orderService } from '../../services/orderService';
 import { addressService } from '../../services/addressService';
 import { paymentMethodService } from '../../services/paymentMethodService';
 import { sanitizeCartItems } from '../../utils/cartValidation';
+import { loader } from '../../services/loaderService';
 import { validateAddress, validatePayment, validateCart } from '../../utils/purchaseValidation';
 import showAppToast from '../../utils/toast';
 import { logger } from '../../utils/logger';
@@ -30,20 +31,24 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
   const [street, setStreet] = useState('');
 
   useEffect(() => {
-    logger.debug('CheckoutPage', 'fetching provinces from API');
-    fetch('https://provinces.open-api.vn/api/?depth=1')
-      .then(res => {
+    const loadProvinces = async () => {
+      logger.debug('CheckoutPage', 'fetching provinces from API');
+      try {
+        loader.show();
+        const res = await fetch('https://provinces.open-api.vn/api/?depth=1');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then(data => {
+        const data = await res.json();
         setProvinces(data);
         logger.info('CheckoutPage', 'provinces loaded', { count: data.length });
-      })
-      .catch(err => {
+      } catch (err: any) {
         logger.error('CheckoutPage', 'failed to fetch provinces', err);
         alert('❌ Không thể tải danh sách tỉnh/thành. Vui lòng kiểm tra kết nối mạng.');
-      });
+      } finally {
+        try { loader.hide(); } catch (e) { /* ignore */ }
+      }
+    };
+
+    loadProvinces();
   }, []);
 
   useEffect(() => {
@@ -105,6 +110,42 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
     }
   }, [selectedProvince, selectedDistrict, selectedWard, street, provinces, districts, wards]);
 
+  // Address must contain at least one letter and one number to allow checkout
+  const addressHasLetter = (addr: string) => {
+    if (!addr) return false;
+    try {
+      return /\p{L}/u.test(addr); // Unicode letter (covers Vietnamese)
+    } catch (e) {
+      return /[A-Za-zÀ-ỹ]/.test(addr);
+    }
+  };
+
+  const addressHasNumber = (addr: string) => {
+    if (!addr) return false;
+    return /\d/.test(addr);
+  };
+
+  const addressHasLetterAndNumber = (addr: string) => {
+    return addressHasLetter(addr) && addressHasNumber(addr);
+  };
+
+  // Street-specific validation: at least 2 characters (non-space), and must contain
+  // at least one letter and one number. We validate the `street` input specifically
+  // to avoid passing validation just because the selected ward/district names contain letters.
+  const streetMeetsMinRequirement = (s: string) => {
+    if (!s) return false;
+    const trimmed = s.trim();
+    if (trimmed.length < 2) return false;
+    return addressHasLetter(trimmed) && addressHasNumber(trimmed);
+  };
+
+  const isAddressValidForCheckout = Boolean(selectedProvince && selectedDistrict && selectedWard && streetMeetsMinRequirement(street));
+
+  // Helper flags for UI messages (based on `street` input)
+  const streetHasLetterFlag = addressHasLetter(street);
+  const streetHasNumberFlag = addressHasNumber(street);
+  const streetHasMinLengthFlag = street.trim().length >= 2;
+
   const [loadingRef, setLoadingRef] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'vnpay' | 'cod' | 'qr'>('cod'); // Payment method selection - VNPay temporarily disabled
 
@@ -112,6 +153,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
     let mounted = true;
     const load = async () => {
       try {
+        loader.show();
         // Always read from localStorage (ignore propCart to ensure latest data)
         const stored = await getCart();
         if (!mounted) return;
@@ -119,6 +161,8 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } catch (e) {
         console.error('Failed to load cart', e);
+      } finally {
+        try { loader.hide(); } catch (e) { /* ignore */ }
       }
     };
     load();
@@ -139,6 +183,12 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
 
     if (!addressValidation.isValid) {
       showAppToast(addressValidation.errors[0] || 'Địa chỉ không hợp lệ', 'error', 2500);
+      return;
+    }
+
+    // Ensure street meets minimum requirement (>=2 chars, contains 1 letter and 1 number)
+    if (!streetMeetsMinRequirement(street)) {
+      showAppToast('Số nhà / đường phải có tối thiểu 2 ký tự, gồm 1 chữ và 1 số', 'error', 2500);
       return;
     }
 
@@ -313,6 +363,12 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
 
     if (!addressValidation.isValid) {
       showAppToast(addressValidation.errors[0] || 'Địa chỉ không hợp lệ', 'error', 2500);
+      return;
+    }
+
+    // Ensure street meets minimum requirement (>=2 chars, contains 1 letter and 1 number)
+    if (!streetMeetsMinRequirement(street)) {
+      showAppToast('Số nhà / đường phải có tối thiểu 2 ký tự, gồm 1 chữ và 1 số', 'error', 2500);
       return;
     }
 
@@ -927,6 +983,19 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
                   />
                 </div>
                 {address && <div className="mt-2 text-sm text-gray-500 italic">Địa chỉ đầy đủ: {address}</div>}
+                {/* Per-keystroke validation messages for the street input */}
+                {street && streetHasNumberFlag && !streetHasLetterFlag && (
+                  <div className="mt-1 text-sm text-red-600">Số nhà / đường phải chứa ít nhất 1 chữ và tổng lớn hơn 2 ký tự.</div>
+                )}
+                {street && streetHasLetterFlag && !streetHasNumberFlag && (
+                  <div className="mt-1 text-sm text-red-600">Số nhà / đường phải chứa ít nhất 1 số và tổng lớn hơn 2 ký tự.</div>
+                )}
+                {street && !streetHasLetterFlag && !streetHasNumberFlag && (
+                  <div className="mt-1 text-sm text-red-600">Số nhà / đường phải chứa ít nhất 1 chữ và 1 số và tổng lớn hơn 2 ký tự.</div>
+                )}
+                {street && !streetHasMinLengthFlag && (
+                  <div className="mt-1 text-sm text-red-600">Số nhà / đường phải chứa tối thiểu 2 ký tự.</div>
+                )}
               </div>
             </div>
 
@@ -1049,14 +1118,12 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
               </div>
 
               <button
-                className={`w-full py-3 rounded-lg font-semibold text-white transition-colors ${address.trim()
-                  ? paymentMethod === 'qr'
-                    ? 'bg-purple-600 hover:bg-purple-700'
-                    : 'bg-green-600 hover:bg-green-700'
+                className={`w-full py-3 rounded-lg font-semibold text-white transition-colors ${isAddressValidForCheckout
+                  ? (paymentMethod === 'qr' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-green-600 hover:bg-green-700')
                   : 'bg-gray-300 cursor-not-allowed'
                   }`}
                 onClick={paymentMethod === 'qr' ? handleQRPaymentOrder : handleCODOrder}
-                disabled={!address.trim()}
+                disabled={!isAddressValidForCheckout}
               >
                 {paymentMethod === 'qr'
                   ? '📱 Thanh toán qua QR'

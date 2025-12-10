@@ -1,6 +1,6 @@
 import { CartItem } from '../types';
 
-const PLACEHOLDER = 'https://via.placeholder.com/150?text=No+Image';
+const PLACEHOLDER = 'https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg';
 
 export function sanitizeCartItems(items: any[]): CartItem[] {
   if (!Array.isArray(items)) return [];

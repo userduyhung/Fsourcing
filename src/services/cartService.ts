@@ -149,9 +149,24 @@ export async function getCart(): Promise<Cart> {
   
   const token = getAuthToken();
   if (!token) {
-    logger.warn('CartService', 'no auth token - returning empty cart');
-    localStorage.removeItem('cartId');
-    localStorage.removeItem('lastCartUserId');
+    // No auth token: keep guest cart in localStorage as a fallback so refreshing the page
+    // doesn't immediately clear the user's cart. We avoid removing `cartId` here because
+    // some deployments may rely on anonymous carts or the frontend may store items locally.
+    logger.warn('CartService', 'no auth token - attempting guest cart fallback');
+    try {
+      const raw = localStorage.getItem('guestCart');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return {
+          items: parsed.items || [],
+          totalAmount: parsed.totalAmount || (parsed.items ? parsed.items.reduce((s: number, it: any) => s + ((it.price || 0) * (it.quantity || 0)), 0) : 0)
+        };
+      }
+    } catch (e) {
+      logger.error('CartService', 'failed to parse guestCart', e);
+    }
+
+    // If no guest cart found, return empty cart but DO NOT aggressively remove cartId/local markers.
     return { items: [], totalAmount: 0 };
   }
   
@@ -265,7 +280,7 @@ export async function getCart(): Promise<Cart> {
               productName: product.name || product.productName || product.Name || 'Sản phẩm',
               quantity: item.quantity,
               price: item.price || product.price || product.Price || 0,
-              image: product.image || product.Image || product.imagePath || product.ImagePath || 'https://via.placeholder.com/150'
+              image: product.image || product.Image || product.imagePath || product.ImagePath || 'https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg'
             };
           } else {
             logger.warn('CartService', `failed to fetch product ${item.productId}`, { status: productRes.status });
@@ -281,7 +296,7 @@ export async function getCart(): Promise<Cart> {
           productName: 'Sản phẩm không xác định',
           quantity: item.quantity,
           price: item.price,
-          image: 'https://via.placeholder.com/150'
+          image: 'https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg'
         };
       })
     );
@@ -313,8 +328,36 @@ export async function addCartItem(
   logger.debug('CartService', 'addCartItem to API', { productId, quantity });
   
   const token = getAuthToken();
+  // const token = getAuthToken();
   if (!token) {
-    throw new Error('Authentication required to add items to cart');
+    // Guest fallback: persist items locally so unauthenticated users can add and
+    // keep cart items across page reloads. This mirrors server-side cart but
+    // stores minimal product info until the user logs in.
+    logger.warn('CartService', 'no auth token - using guest cart fallback for addCartItem');
+    try {
+      const raw = localStorage.getItem('guestCart');
+      const parsed = raw ? JSON.parse(raw) : { items: [] as any[] };
+      const newItem = {
+        id: `g_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        productId,
+        productName: productInfo?.name || 'Sản phẩm',
+        quantity,
+        price: productInfo?.price || 0,
+        image: productInfo?.image || 'https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg'
+      };
+      parsed.items = parsed.items || [];
+      parsed.items.push(newItem);
+      parsed.totalAmount = parsed.items.reduce((s: number, it: any) => s + ((it.price || 0) * (it.quantity || 0)), 0);
+      localStorage.setItem('guestCart', JSON.stringify(parsed));
+      window.dispatchEvent(new Event('cartUpdated'));
+      return {
+        items: parsed.items,
+        totalAmount: parsed.totalAmount
+      } as Cart;
+    } catch (e) {
+      logger.error('CartService', 'failed to update guestCart', e);
+      throw e;
+    }
   }
   
   // Get or create cartId - validation happens in getCart()
@@ -445,6 +488,9 @@ export async function clearCart(): Promise<void> {
   logger.debug('CartService', 'clearCart');
   
   localStorage.removeItem('cartId');
+  // Also clear guest cart stored locally so UI shows empty immediately
+  localStorage.removeItem('guestCart');
+  localStorage.removeItem('lastCartUserId');
   
   // Emit custom event to notify other components
   window.dispatchEvent(new Event('cartUpdated'));

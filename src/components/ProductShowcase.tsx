@@ -32,7 +32,7 @@ const ProductShowcase: React.FC<{ addToCart?: (product: any) => void }> = ({ add
             id: p.id,
             name: p.name,
             description: p.description || 'Không có mô tả',
-            image: p.imagePath || 'https://via.placeholder.com/300x300?text=No+Image',
+            image: p.imagePath || 'https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg',
             price: p.referencePrice,
             quantity: `${p.stockQuantity} cái`
           }));

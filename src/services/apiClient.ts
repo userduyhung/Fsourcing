@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import createGeneratedApi, { RequestFn } from './api-client.generated';
+import { loader } from './loaderService';
 
 function getRuntimeApiBase() {
   try {
@@ -47,6 +48,9 @@ const client: AxiosInstance = axios.create({
 // Attach token automatically when present in localStorage
 client.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   try {
+    // show global loader for in-flight requests
+    try { loader.show(); } catch (e) { /* ignore */ }
+
     const buyerToken = localStorage.getItem('buyerToken');
     const sellerToken = localStorage.getItem('sellerToken');
     const token = buyerToken || sellerToken || localStorage.getItem('token');
@@ -60,6 +64,18 @@ client.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   }
   return config;
 });
+
+// Hide the loader when responses complete (success or error)
+client.interceptors.response.use(
+  (response) => {
+    try { loader.hide(); } catch (e) { /* ignore */ }
+    return response;
+  },
+  (error) => {
+    try { loader.hide(); } catch (e) { /* ignore */ }
+    return Promise.reject(error);
+  }
+);
 
 // Basic wrapper
 async function request(method: 'get' | 'post' | 'put' | 'delete' | 'patch', path: string, data?: any, params?: any) {

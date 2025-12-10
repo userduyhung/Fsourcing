@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { CartItem } from '../../types';
 import { updateCartItem, deleteCartItem, getCart } from '../../services/cartService';
 import { sanitizeCartItems } from '../../utils/cartValidation';
+import { loader } from '../../services/loaderService';
 import { validateCart, validateQuantityUpdate } from '../../utils/purchaseValidation';
 import showAppToast from '../../utils/toast';
 import { logger } from '../../utils/logger';
@@ -20,6 +21,7 @@ const CartPage: React.FC = () => {
     const load = async () => {
       try {
         logger.debug('CartPage', 'loading cart on mount');
+        loader.show();
         const stored = await getCart();
         if (!mounted) return;
         logger.debug('CartPage', 'cart loaded', { itemCount: stored.items.length, items: stored.items });
@@ -27,6 +29,8 @@ const CartPage: React.FC = () => {
       } catch (e) {
         logger.error('CartPage', 'failed to load cart', e);
         console.error('Failed to load cart from storage', e);
+      } finally {
+        try { loader.hide(); } catch (e) { /* ignore */ }
       }
     };
     load();
@@ -35,6 +39,7 @@ const CartPage: React.FC = () => {
 
   const refreshFromStorage = async () => {
     try {
+      loader.show();
       const stored = await getCart();
       logger.debug('CartPage', 'raw cart from storage', { itemCount: stored.items.length });
       const sanitized = sanitizeCartItems(stored.items as any);
@@ -42,6 +47,8 @@ const CartPage: React.FC = () => {
       setCartState(sanitized);
     } catch (e) {
       console.error('Failed to refresh cart from storage', e);
+    } finally {
+      try { loader.hide(); } catch (e) { /* ignore */ }
     }
   };
 
@@ -127,7 +134,7 @@ const CartPage: React.FC = () => {
               {cartState.map((item) => {
                 const isUpdating = updatingIds.includes(item.productId);
                 const displayName = item.productName || item.name || 'Sản phẩm';
-                const displayImage = item.image || 'https://via.placeholder.com/150?text=No+Image';
+                const displayImage = item.image || 'https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg';
                 const displayPrice = Number(item.price) || 0;
                 
                 return (
@@ -137,7 +144,7 @@ const CartPage: React.FC = () => {
                       alt={displayName} 
                       className="w-20 h-20 object-cover rounded"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150?text=No+Image';
+                        (e.target as HTMLImageElement).src = 'https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg';
                       }}
                     />
                     <div className="flex-1">

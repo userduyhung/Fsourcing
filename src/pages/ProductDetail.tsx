@@ -33,7 +33,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ addToCart }) => {
   const [showAdded, setShowAdded] = useState(false);
   const [mainImage, setMainImage] = useState<string | undefined>();
   const [quantity, setQuantity] = useState(1);
-  const PLACEHOLDER = 'https://via.placeholder.com/800x600?text=No+Image';
+  const PLACEHOLDER = 'https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg';
 
   // Fetch product by ID if not passed via location.state
   useEffect(() => {
@@ -214,7 +214,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ addToCart }) => {
                         alt={product.name ? `${product.name} - ảnh ${idx + 1}` : `thumb-${idx}`}
                         className="w-20 h-20 object-cover rounded"
                         loading="lazy"
-                        onError={(e: any) => { e.currentTarget.src = 'https://via.placeholder.com/64?text=No+Image'; }}
+                        onError={(e: any) => { e.currentTarget.src = 'https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg'; }}
                       />
                     </button>
                   )) : (
@@ -363,7 +363,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ addToCart }) => {
                   <div className="mt-2 flex items-center justify-center gap-2">
                     {images.map((s, i) => (
                       <button key={i} onClick={() => setPreviewIndex(i)} className={`w-12 h-12 border rounded overflow-hidden ${i === previewIndex ? 'ring-2 ring-blue-400' : ''}`}>
-                        <img src={s} alt={`thumb-preview-${i}`} className="w-full h-full object-cover" onError={(e: any) => { e.currentTarget.src = 'https://via.placeholder.com/64?text=No+Image'; }} />
+                        <img src={s} alt={`thumb-preview-${i}`} className="w-full h-full object-cover" onError={(e: any) => { e.currentTarget.src = 'https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg'; }} />
                       </button>
                     ))}
                   </div>

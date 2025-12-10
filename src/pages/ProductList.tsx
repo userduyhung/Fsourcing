@@ -74,7 +74,7 @@ export const ProductList: React.FC<{ addToCart?: (product: any) => void }> = ({ 
             createdAt: p.createdAt,
             updatedAt: p.updatedAt,
             // Map to old format for compatibility
-            image: p.imagePath || 'https://via.placeholder.com/300x300?text=No+Image',
+            image: p.imagePath || 'https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg',
             price: p.referencePrice,
             quantity: `${p.stockQuantity} cái`
           }));
@@ -211,7 +211,38 @@ export const ProductList: React.FC<{ addToCart?: (product: any) => void }> = ({ 
         </div>
 
         {/* Products Display */}
-        {selectedCategory === 'Tất cả' ? (
+        {selectedCategory === 'Tất cả' && allFilteredProducts.length === 0 && (
+          <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+            <div className="text-6xl mb-4">🔎</div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">Không tìm thấy sản phẩm</h3>
+            <p className="text-gray-600 mb-4">Không có sản phẩm nào khớp với "{searchQuery || ''}".</p>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => {
+                  try {
+                    const u = new URL(window.location.href);
+                    u.searchParams.delete('search');
+                    window.history.replaceState({}, '', u.toString());
+                    window.location.reload();
+                  } catch (e) {
+                    window.location.href = window.location.pathname;
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Xóa tìm kiếm
+              </button>
+              <button
+                onClick={() => setSelectedCategory('Tất cả')}
+                className="px-4 py-2 bg-gray-100 text-gray-800 rounded hover:shadow"
+              >
+                Xem tất cả sản phẩm
+              </button>
+            </div>
+          </div>
+        )}
+
+        {selectedCategory === 'Tất cả' && allFilteredProducts.length > 0 && (
           <div className="space-y-10">
             {filteredCategories.map((category, categoryIdx) => (
               <div key={category.name} className="animate-fade-in" style={{ animationDelay: `${categoryIdx * 0.1}s` }}>
@@ -253,7 +284,9 @@ export const ProductList: React.FC<{ addToCart?: (product: any) => void }> = ({ 
               </div>
             ))}
           </div>
-        ) : (
+        )}
+
+        {selectedCategory !== 'Tất cả' && (
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
               {productsForSelectedCategory.map((product, idx) => (
@@ -298,6 +331,7 @@ export const ProductList: React.FC<{ addToCart?: (product: any) => void }> = ({ 
         </div>
       </div>
     </div>
-  );
-}
+      );
+};  
+export default ProductList;
 
