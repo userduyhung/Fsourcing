@@ -14,15 +14,15 @@ import VNPayTestInfoModal from '../../components/VNPayTestInfoModal';
 
 const currency = (v: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
 
-interface CheckoutPageProps { 
-  onClearCart?: () => void; 
+interface CheckoutPageProps {
+  onClearCart?: () => void;
 }
 
 const CheckoutPage: React.FC<CheckoutPageProps> = () => {
   const navigate = useNavigate();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [address, setAddress] = useState('');
-  
+
   // Address selection states
   const [provinces, setProvinces] = useState<any[]>([]);
   const [districts, setDistricts] = useState<any[]>([]);
@@ -31,9 +31,9 @@ const CheckoutPage: React.FC<CheckoutPageProps> = () => {
   const [selectedDistrict, setSelectedDistrict] = useState('');
   const [selectedWard, setSelectedWard] = useState('');
   const [street, setStreet] = useState('');
-  
+
   const [loadingRef, setLoadingRef] = useState(false);
-  
+
   // VNPay test modal state
   const [showTestModal, setShowTestModal] = useState(false);
   const [pendingPaymentUrl, setPendingPaymentUrl] = useState<string | null>(null);
@@ -141,31 +141,31 @@ const CheckoutPage: React.FC<CheckoutPageProps> = () => {
       wards.find(w => w.code == selectedWard)?.name || '',
       street
     );
-    
+
     if (!addressValidation.isValid) {
       showAppToast(addressValidation.errors[0] || 'Địa chỉ không hợp lệ', 'error', 2500);
       return;
     }
-    
+
     // Validate cart before payment
     const cartValidation = validateCart(cart);
     if (!cartValidation.isValid) {
       showAppToast(cartValidation.errors[0] || 'Giỏ hàng có lỗi', 'error', 2500);
       return;
     }
-    
+
     // Validate payment details
     const paymentValidation = validatePayment(cart, address, total);
     if (!paymentValidation.isValid) {
       showAppToast(paymentValidation.errors[0] || 'Thông tin thanh toán không hợp lệ', 'error', 2500);
       return;
     }
-    
+
     // Show warnings if any
     if (paymentValidation.warnings.length > 0) {
       showAppToast(paymentValidation.warnings[0], 'warning', 2500);
     }
-    
+
     // 🆕 CREATE ORDER VIA API BEFORE SHOWING PAYMENT
     setLoadingRef(true);
     try {
@@ -181,7 +181,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = () => {
       const provinceName = provinces.find(p => p.code == selectedProvince)?.name || '';
       const districtName = districts.find(d => d.code == selectedDistrict)?.name || '';
       const wardName = wards.find(w => w.code == selectedWard)?.name || '';
-      
+
       const addressData = {
         recipientName: 'Khách hàng', // Can be enhanced with user input
         street: street || 'Không có',
@@ -207,7 +207,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = () => {
       logger.info('CheckoutPage', 'payment method created', { paymentMethodId: createdPaymentMethod.id });
 
       // Step 3: Create order with address ID and payment method ID
-      
+
       const orderData = {
         CartId: cartId,
         DeliveryAddressId: createdAddress.id,
@@ -216,13 +216,13 @@ const CheckoutPage: React.FC<CheckoutPageProps> = () => {
       };
 
       logger.debug('CheckoutPage', 'creating order via API', orderData);
-      
+
       const order = await orderService.createOrder(orderData);
       logger.info('CheckoutPage', 'order created successfully', { orderId: order.id });
 
       // Save order ID for tracking
       localStorage.setItem('currentOrderId', order.id);
-      
+
       // Save order details for payment reference
       localStorage.setItem('pendingPaymentOrder', JSON.stringify({
         orderId: order.id,
@@ -231,10 +231,10 @@ const CheckoutPage: React.FC<CheckoutPageProps> = () => {
       }));
 
       showAppToast(`✅ Đơn hàng #${order.id.substring(0, 8)} đã được tạo thành công! Đang chuyển đến VNPay...`, 'success', 2000);
-      
+
       // Redirect to VNPay payment
       logger.info('CheckoutPage', 'redirecting to VNPay payment', { orderId: order.id, amount: total });
-      
+
       // Get user's IP address (required by VNPay)
       const ipAddress = await getUserIpAddress();
 
@@ -263,11 +263,11 @@ const CheckoutPage: React.FC<CheckoutPageProps> = () => {
       }));
 
       logger.info('CheckoutPage', 'redirecting to VNPay', { paymentUrl: vnpayResult.paymentUrl });
-      
+
       // Show test info modal before redirect
       setPendingPaymentUrl(vnpayResult.paymentUrl!);
       setShowTestModal(true);
-      
+
     } catch (orderError: any) {
       logger.error('CheckoutPage', 'checkout process failed', orderError);
       const errorMsg = orderError.message || 'Đã xảy ra lỗi trong quá trình đặt hàng';
@@ -351,7 +351,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <div>
                     <label className="block text-sm text-gray-600 mb-1">Tỉnh / Thành phố</label>
-                    <select 
+                    <select
                       className="w-full border border-gray-300 rounded px-3 py-2"
                       value={selectedProvince}
                       onChange={e => setSelectedProvince(e.target.value)}
@@ -364,7 +364,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = () => {
                   </div>
                   <div>
                     <label className="block text-sm text-gray-600 mb-1">Quận / Huyện</label>
-                    <select 
+                    <select
                       className="w-full border border-gray-300 rounded px-3 py-2"
                       value={selectedDistrict}
                       onChange={e => setSelectedDistrict(e.target.value)}
@@ -378,7 +378,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = () => {
                   </div>
                   <div>
                     <label className="block text-sm text-gray-600 mb-1">Phường / Xã</label>
-                    <select 
+                    <select
                       className="w-full border border-gray-300 rounded px-3 py-2"
                       value={selectedWard}
                       onChange={e => setSelectedWard(e.target.value)}
@@ -417,7 +417,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="mb-4">
                 <div className="flex justify-between items-center text-sm mb-2">
                   <span className="text-gray-600">Tạm tính</span>
@@ -436,9 +436,8 @@ const CheckoutPage: React.FC<CheckoutPageProps> = () => {
               </div>
 
               <button
-                className={`w-full py-3 rounded-lg font-semibold text-white flex items-center justify-center gap-2 ${
-                  address.trim() && !loadingRef ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed'
-                }`}
+                className={`w-full py-3 rounded-lg font-semibold text-white flex items-center justify-center gap-2 ${address.trim() && !loadingRef ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed'
+                  }`}
                 onClick={createLocalPaymentRef}
                 disabled={!address.trim() || loadingRef}
               >

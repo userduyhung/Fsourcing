@@ -9,7 +9,7 @@ import { sanitizeCartItems } from '../../utils/cartValidation';
 import { validateAddress, validatePayment, validateCart } from '../../utils/purchaseValidation';
 import showAppToast from '../../utils/toast';
 import { logger } from '../../utils/logger';
-import { createVNPayPayment, getUserIpAddress, VNPAY_BANK_CODES } from '../../services/vnpayService.ts';
+// import { createVNPayPayment, getUserIpAddress, VNPAY_BANK_CODES } from '../../services/vnpayService.ts'; // Temporarily disabled
 
 const currency = (v: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
 
@@ -19,7 +19,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
   const navigate = useNavigate();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [address, setAddress] = useState('');
-  
+
   // Address selection states
   const [provinces, setProvinces] = useState<any[]>([]);
   const [districts, setDistricts] = useState<any[]>([]);
@@ -106,7 +106,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
   }, [selectedProvince, selectedDistrict, selectedWard, street, provinces, districts, wards]);
 
   const [loadingRef, setLoadingRef] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'vnpay' | 'cod'>('vnpay'); // Payment method selection
+  const [paymentMethod, setPaymentMethod] = useState<'vnpay' | 'cod' | 'qr'>('cod'); // Payment method selection - VNPay temporarily disabled
 
   useEffect(() => {
     let mounted = true;
@@ -136,31 +136,31 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
       wards.find(w => w.code == selectedWard)?.name || '',
       street
     );
-    
+
     if (!addressValidation.isValid) {
       showAppToast(addressValidation.errors[0] || 'Địa chỉ không hợp lệ', 'error', 2500);
       return;
     }
-    
+
     // Validate cart before payment
     const cartValidation = validateCart(cart);
     if (!cartValidation.isValid) {
       showAppToast(cartValidation.errors[0] || 'Giỏ hàng có lỗi', 'error', 2500);
       return;
     }
-    
+
     // Validate payment details
     const paymentValidation = validatePayment(cart, address, total);
     if (!paymentValidation.isValid) {
       showAppToast(paymentValidation.errors[0] || 'Thông tin thanh toán không hợp lệ', 'error', 2500);
       return;
     }
-    
+
     // Show warnings if any
     if (paymentValidation.warnings.length > 0) {
       showAppToast(paymentValidation.warnings[0], 'warning', 2500);
     }
-    
+
     setLoadingRef(true);
     try {
       const cartId = localStorage.getItem('cartId');
@@ -175,7 +175,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
       const provinceName = provinces.find(p => p.code == selectedProvince)?.name || '';
       const districtName = districts.find(d => d.code == selectedDistrict)?.name || '';
       const wardName = wards.find(w => w.code == selectedWard)?.name || '';
-      
+
       const addressData = {
         recipientName: 'Khách hàng',
         street: street || 'Không có',
@@ -244,39 +244,39 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
       };
 
       logger.debug('CheckoutPage', 'creating COD order via API', orderData);
-      
+
       try {
         const order = await orderService.createOrder(orderData);
-        
+
         logger.info('CheckoutPage', 'COD order created successfully', { orderId: order.id || (order as any)?.Id });
 
         // Backend might return Id (PascalCase) instead of id (camelCase)
         const orderId = order.id || (order as any)?.Id;
-        
+
         if (!orderId) {
           throw new Error('Order created but no ID returned from server');
         }
 
         // Save order ID for tracking
         localStorage.setItem('currentOrderId', orderId);
-        
+
         // Clear cart after successful COD order
         await clearCart();
         if (onClearCart) onClearCart();
-        
+
         setLoadingRef(false);
-        
+
         showAppToast(`✅ Đơn hàng #${orderId.substring(0, 8)} đã được tạo thành công! Vui lòng chuẩn bị tiền mặt khi nhận hàng.`, 'success', 3000);
-        
+
         // Redirect to order confirmation page
         setTimeout(() => {
           navigate(`/buyer/orders/${orderId}`);
         }, 1500);
-        
+
       } catch (createOrderError: any) {
         const errorMsg = createOrderError.message || createOrderError.toString();
         logger.error('CheckoutPage', 'COD order creation failed', { error: errorMsg, orderData });
-        
+
         if (errorMsg.includes('entity changes') || errorMsg.includes('database')) {
           showAppToast('⚠️ Lỗi hệ thống khi tạo đơn hàng. Vui lòng liên hệ hỗ trợ.', 'error', 4000);
         } else if (errorMsg.includes('Cart')) {
@@ -288,11 +288,11 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
         } else {
           showAppToast('Không thể tạo đơn hàng. Vui lòng thử lại sau.', 'error', 3000);
         }
-        
+
         setLoadingRef(false);
         return;
       }
-      
+
     } catch (orderError: any) {
       logger.error('CheckoutPage', 'COD checkout process failed', orderError);
       const errorMsg = orderError.message || 'Đã xảy ra lỗi trong quá trình đặt hàng';
@@ -302,6 +302,174 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
     }
   };
 
+  const handleQRPaymentOrder = async () => {
+    // Validate address components
+    const addressValidation = validateAddress(
+      provinces.find(p => p.code == selectedProvince)?.name || '',
+      districts.find(d => d.code == selectedDistrict)?.name || '',
+      wards.find(w => w.code == selectedWard)?.name || '',
+      street
+    );
+
+    if (!addressValidation.isValid) {
+      showAppToast(addressValidation.errors[0] || 'Địa chỉ không hợp lệ', 'error', 2500);
+      return;
+    }
+
+    // Validate cart before payment
+    const cartValidation = validateCart(cart);
+    if (!cartValidation.isValid) {
+      showAppToast(cartValidation.errors[0] || 'Giỏ hàng có lỗi', 'error', 2500);
+      return;
+    }
+
+    // Validate payment details
+    const paymentValidation = validatePayment(cart, address, total);
+    if (!paymentValidation.isValid) {
+      showAppToast(paymentValidation.errors[0] || 'Thông tin thanh toán không hợp lệ', 'error', 2500);
+      return;
+    }
+
+    setLoadingRef(true);
+    try {
+      const cartId = localStorage.getItem('cartId');
+      if (!cartId) {
+        showAppToast('Không tìm thấy giỏ hàng. Vui lòng thêm sản phẩm vào giỏ trước.', 'error', 3000);
+        setLoadingRef(false);
+        return;
+      }
+
+      // Step 1: Create delivery address
+      logger.debug('CheckoutPage', 'creating delivery address for QR payment');
+      const provinceName = provinces.find(p => p.code == selectedProvince)?.name || '';
+      const districtName = districts.find(d => d.code == selectedDistrict)?.name || '';
+      const wardName = wards.find(w => w.code == selectedWard)?.name || '';
+
+      const addressData = {
+        recipientName: 'Khách hàng',
+        street: street || 'Không có',
+        city: provinceName,
+        state: `${districtName}, ${wardName}`,
+        zipCode: '',
+        country: 'Vietnam',
+        isDefault: false
+      };
+
+      const createdAddress = await addressService.createAddress(addressData);
+      logger.info('CheckoutPage', 'address created for QR payment', { addressId: createdAddress.id });
+
+      // Step 2: Create payment method for QR
+      logger.debug('CheckoutPage', 'creating QR payment method');
+      const paymentMethodData = {
+        type: 'qr_payment',
+        cardholderName: 'Thanh toán QR Code',
+        isDefault: true
+      };
+
+      const createdPaymentMethod = await paymentMethodService.createPaymentMethod(paymentMethodData);
+      logger.info('CheckoutPage', 'QR payment method created', { paymentMethodId: createdPaymentMethod.id });
+
+      // Verify address exists
+      try {
+        await addressService.getAddressById(createdAddress.id);
+        logger.debug('CheckoutPage', 'address verified in database');
+      } catch (verifyError) {
+        logger.error('CheckoutPage', 'address verification failed', verifyError);
+        showAppToast('Địa chỉ không hợp lệ. Vui lòng thử lại.', 'error', 3000);
+        setLoadingRef(false);
+        return;
+      }
+
+      // Verify payment method exists
+      try {
+        await paymentMethodService.getPaymentMethodById(createdPaymentMethod.id);
+        logger.debug('CheckoutPage', 'payment method verified in database');
+      } catch (verifyError) {
+        logger.error('CheckoutPage', 'payment method verification failed', verifyError);
+        showAppToast('Phương thức thanh toán không hợp lệ. Vui lòng thử lại.', 'error', 3000);
+        setLoadingRef(false);
+        return;
+      }
+
+      // Step 3: Validate cart has items
+      if (cart.length === 0) {
+        showAppToast('Giỏ hàng trống. Vui lòng thêm sản phẩm trước khi đặt hàng.', 'error', 3000);
+        setLoadingRef(false);
+        return;
+      }
+
+      // Step 4: Create order with QR payment
+      const orderData = {
+        CartId: cartId,
+        DeliveryAddressId: createdAddress.id,
+        PaymentMethodId: createdPaymentMethod.id,
+        SpecialInstructions: `📱 Thanh toán qua QR Code\nĐịa chỉ: ${address}\n📦 Miễn phí vận chuyển cho tất cả đơn hàng!\n🎉 Theo dõi trang để nhận nhiều ưu đãi hấp dẫn sắp tới!`
+      };
+
+      logger.debug('CheckoutPage', 'creating QR order via API', orderData);
+
+      try {
+        const order = await orderService.createOrder(orderData);
+        logger.info('CheckoutPage', 'QR order created successfully', { orderId: order.id || (order as any)?.Id });
+
+        // Backend might return Id (PascalCase) instead of id (camelCase)
+        const orderId = order.id || (order as any)?.Id;
+
+        if (!orderId) {
+          throw new Error('Order created but no ID returned from server');
+        }
+
+        // Save order ID for tracking
+        localStorage.setItem('currentOrderId', orderId);
+
+        // Save order details for QR payment page
+        localStorage.setItem('qrPaymentOrder', JSON.stringify({
+          orderId: orderId,
+          amount: total,
+          items: cart,
+          address: address,
+          timestamp: new Date().toISOString()
+        }));
+
+        setLoadingRef(false);
+
+        showAppToast(`✅ Đơn hàng #${orderId.substring(0, 8)} đã được tạo! Đang chuyển đến trang thanh toán...`, 'success', 2000);
+
+        // Redirect to QR payment page
+        setTimeout(() => {
+          navigate(`/buyer/qr-payment/${orderId}`);
+        }, 1500);
+
+      } catch (createOrderError: any) {
+        const errorMsg = createOrderError.message || createOrderError.toString();
+        logger.error('CheckoutPage', 'QR order creation failed', { error: errorMsg, orderData });
+
+        if (errorMsg.includes('entity changes') || errorMsg.includes('database')) {
+          showAppToast('⚠️ Lỗi hệ thống khi tạo đơn hàng. Vui lòng liên hệ hỗ trợ.', 'error', 4000);
+        } else if (errorMsg.includes('Cart')) {
+          showAppToast('Giỏ hàng không hợp lệ. Vui lòng thử lại.', 'error', 3000);
+        } else if (errorMsg.includes('Address')) {
+          showAppToast('Địa chỉ không hợp lệ. Vui lòng kiểm tra lại.', 'error', 3000);
+        } else if (errorMsg.includes('Payment')) {
+          showAppToast('Phương thức thanh toán không hợp lệ.', 'error', 3000);
+        } else {
+          showAppToast('Không thể tạo đơn hàng. Vui lòng thử lại sau.', 'error', 3000);
+        }
+
+        setLoadingRef(false);
+        return;
+      }
+
+    } catch (orderError: any) {
+      logger.error('CheckoutPage', 'QR checkout process failed', orderError);
+      const errorMsg = orderError.message || 'Đã xảy ra lỗi trong quá trình đặt hàng';
+      showAppToast(errorMsg, 'error', 3000);
+      setLoadingRef(false);
+      return;
+    }
+  };
+
+  /* VNPay Payment Functions - Temporarily Disabled
   const createLocalPaymentRef = async () => {
     // Validate address components
     const addressValidation = validateAddress(
@@ -310,31 +478,31 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
       wards.find(w => w.code == selectedWard)?.name || '',
       street
     );
-    
+
     if (!addressValidation.isValid) {
       showAppToast(addressValidation.errors[0] || 'Địa chỉ không hợp lệ', 'error', 2500);
       return;
     }
-    
+
     // Validate cart before payment
     const cartValidation = validateCart(cart);
     if (!cartValidation.isValid) {
       showAppToast(cartValidation.errors[0] || 'Giỏ hàng có lỗi', 'error', 2500);
       return;
     }
-    
+
     // Validate payment details
     const paymentValidation = validatePayment(cart, address, total);
     if (!paymentValidation.isValid) {
       showAppToast(paymentValidation.errors[0] || 'Thông tin thanh toán không hợp lệ', 'error', 2500);
       return;
     }
-    
+
     // Show warnings if any
     if (paymentValidation.warnings.length > 0) {
       showAppToast(paymentValidation.warnings[0], 'warning', 2500);
     }
-    
+
     // 🆕 CREATE ORDER VIA API BEFORE SHOWING PAYMENT
     setLoadingRef(true);
     try {
@@ -350,7 +518,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
       const provinceName = provinces.find(p => p.code == selectedProvince)?.name || '';
       const districtName = districts.find(d => d.code == selectedDistrict)?.name || '';
       const wardName = wards.find(w => w.code == selectedWard)?.name || '';
-      
+
       const addressData = {
         recipientName: 'Khách hàng', // Can be enhanced with user input
         street: street || 'Không có',
@@ -419,22 +587,22 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
       };
 
       logger.debug('CheckoutPage', 'creating order via API', orderData);
-      
+
       try {
         const order = await orderService.createOrder(orderData);
-        
+
         logger.info('CheckoutPage', 'order created successfully', { orderId: order.id || (order as any)?.Id });
 
         // Backend might return Id (PascalCase) instead of id (camelCase)
         const orderId = order.id || (order as any)?.Id;
-        
+
         if (!orderId) {
           throw new Error('Order created but no ID returned from server');
         }
 
         // Save order ID for tracking
         localStorage.setItem('currentOrderId', orderId);
-        
+
         // Save order details for payment reference
         localStorage.setItem('pendingPaymentOrder', JSON.stringify({
           orderId: orderId,
@@ -443,11 +611,11 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
         }));
 
         showAppToast(`✅ Đơn hàng #${orderId.substring(0, 8)} đã được tạo thành công! Đang chuyển đến VNPay...`, 'success', 2000);
-        
+
         // Redirect to VNPay payment instead of order confirmation
         try {
           logger.info('CheckoutPage', 'redirecting to VNPay payment', { orderId: orderId, amount: total });
-          
+
           // Get user's IP address (required by VNPay)
           const ipAddress = await getUserIpAddress();
 
@@ -476,12 +644,12 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
           }));
 
           logger.info('CheckoutPage', 'redirecting to VNPay', { paymentUrl: vnpayResult.paymentUrl });
-          
+
           // Redirect to VNPay payment page
           setTimeout(() => {
             window.location.href = vnpayResult.paymentUrl!;
           }, 500);
-          
+
           return;
         } catch (vnpayError: any) {
           logger.error('CheckoutPage', 'VNPay payment failed', vnpayError);
@@ -493,7 +661,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
         // More specific error handling
         const errorMsg = createOrderError.message || createOrderError.toString();
         logger.error('CheckoutPage', 'order creation failed', { error: errorMsg, orderData });
-        
+
         if (errorMsg.includes('entity changes') || errorMsg.includes('database')) {
           showAppToast('⚠️ Lỗi hệ thống khi tạo đơn hàng. Vui lòng liên hệ hỗ trợ.', 'error', 4000);
         } else if (errorMsg.includes('Cart')) {
@@ -505,11 +673,11 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
         } else {
           showAppToast('Không thể tạo đơn hàng. Vui lòng thử lại sau.', 'error', 3000);
         }
-        
+
         setLoadingRef(false);
         return;
       }
-      
+
     } catch (orderError: any) {
       logger.error('CheckoutPage', 'checkout process failed', orderError);
       const errorMsg = orderError.message || 'Đã xảy ra lỗi trong quá trình đặt hàng';
@@ -528,21 +696,21 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
         wards.find(w => w.code == selectedWard)?.name || '',
         street
       );
-      
+
       if (!addressValidation.isValid) {
         showAppToast(addressValidation.errors[0] || 'Địa chỉ không hợp lệ', 'error', 2500);
         return;
       }
 
       setLoadingRef(true);
-      
+
       // Check if order already exists
       let currentOrderId = localStorage.getItem('currentOrderId');
-      
+
       // If no order exists, create one first
       if (!currentOrderId) {
         logger.debug('CheckoutPage', 'no existing order, creating new order before VNPay payment');
-        
+
         try {
           const cartId = localStorage.getItem('cartId');
           if (!cartId) {
@@ -555,7 +723,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
           const provinceName = provinces.find(p => p.code == selectedProvince)?.name || '';
           const districtName = districts.find(d => d.code == selectedDistrict)?.name || '';
           const wardName = wards.find(w => w.code == selectedWard)?.name || '';
-          
+
           const addressData = {
             recipientName: 'Khách hàng',
             street: street || 'Không có',
@@ -586,16 +754,16 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
           };
 
           const order = await orderService.createOrder(orderData);
-          
+
           // Backend might return Id (PascalCase) instead of id (camelCase)
           currentOrderId = order.id || (order as any)?.Id;
-          
+
           if (!currentOrderId) {
             throw new Error('Order created but no ID returned from server');
           }
-          
+
           localStorage.setItem('currentOrderId', currentOrderId);
-          
+
           logger.info('CheckoutPage', 'order created before VNPay payment', { orderId: currentOrderId });
         } catch (createError: any) {
           logger.error('CheckoutPage', 'failed to create order for VNPay', createError);
@@ -635,20 +803,21 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
       }));
 
       logger.info('CheckoutPage', 'redirecting to VNPay', { paymentUrl: vnpayResult.paymentUrl });
-      
+
       // Redirect to VNPay payment page
       showAppToast('🔄 Đang chuyển đến trang thanh toán VNPay...', 'info', 2000);
-      
+
       setTimeout(() => {
         window.location.href = vnpayResult.paymentUrl!;
       }, 500);
-      
+
     } catch (error: any) {
       logger.error('CheckoutPage', 'VNPay payment failed', error);
       setLoadingRef(false);
       showAppToast(`⚠️ ${error.message || 'Không thể kết nối đến VNPay'}`, 'error', 3000);
     }
   };
+  */ // End of VNPay Payment Functions
 
 
 
@@ -707,7 +876,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <div>
                     <label className="block text-sm text-gray-600 mb-1">Tỉnh / Thành phố</label>
-                    <select 
+                    <select
                       className="w-full border border-gray-300 rounded px-3 py-2"
                       value={selectedProvince}
                       onChange={e => setSelectedProvince(e.target.value)}
@@ -720,7 +889,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
                   </div>
                   <div>
                     <label className="block text-sm text-gray-600 mb-1">Quận / Huyện</label>
-                    <select 
+                    <select
                       className="w-full border border-gray-300 rounded px-3 py-2"
                       value={selectedDistrict}
                       onChange={e => setSelectedDistrict(e.target.value)}
@@ -734,7 +903,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
                   </div>
                   <div>
                     <label className="block text-sm text-gray-600 mb-1">Phường / Xã</label>
-                    <select 
+                    <select
                       className="w-full border border-gray-300 rounded px-3 py-2"
                       value={selectedWard}
                       onChange={e => setSelectedWard(e.target.value)}
@@ -779,16 +948,15 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
               <div className="mb-4">
                 <label className="block font-semibold mb-3 text-gray-800">Phương thức thanh toán</label>
                 <div className="space-y-3">
-                  {/* VNPay Option */}
-                  <div 
+                  {/* VNPay Option - Temporarily Disabled */}
+                  {/* <div
                     onClick={() => setPaymentMethod('vnpay')}
-                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                      paymentMethod === 'vnpay' 
-                        ? 'border-blue-500 bg-blue-50' 
+                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${paymentMethod === 'vnpay'
+                        ? 'border-blue-500 bg-blue-50'
                         : 'border-gray-200 hover:border-blue-300'
-                    }`}
+                      }`}
                   >
-                    <div className="flex items-center">
+                    \u003cdiv className="flex items-center">
                       <input
                         type="radio"
                         name="payment"
@@ -805,16 +973,42 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
                         <p className="text-sm text-gray-600 mt-1">Thanh toán online qua cổng VNPay</p>
                       </div>
                     </div>
+                  </div> */}
+
+                  {/* QR Payment Option */}
+                  <div
+                    onClick={() => setPaymentMethod('qr')}
+                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${paymentMethod === 'qr'
+                      ? 'border-purple-500 bg-purple-50'
+                      : 'border-gray-200 hover:border-purple-300'
+                      }`}
+                  >
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        name="payment"
+                        value="qr"
+                        checked={paymentMethod === 'qr'}
+                        onChange={() => setPaymentMethod('qr')}
+                        className="mr-3 w-4 h-4"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-gray-800">QR Code</span>
+                          <span className="text-2xl">📱</span>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">Quét mã QR để thanh toán</p>
+                      </div>
+                    </div>
                   </div>
 
                   {/* COD Option */}
-                  <div 
+                  <div
                     onClick={() => setPaymentMethod('cod')}
-                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                      paymentMethod === 'cod' 
-                        ? 'border-green-500 bg-green-50' 
-                        : 'border-gray-200 hover:border-green-300'
-                    }`}
+                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${paymentMethod === 'cod'
+                      ? 'border-green-500 bg-green-50'
+                      : 'border-gray-200 hover:border-green-300'
+                      }`}
                   >
                     <div className="flex items-center">
                       <input
@@ -836,7 +1030,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="mb-4">
                 <div className="flex justify-between items-center text-sm mb-2">
                   <span className="text-gray-600">Tạm tính</span>
@@ -855,18 +1049,17 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ onClearCart }) => {
               </div>
 
               <button
-                className={`w-full py-3 rounded-lg font-semibold text-white transition-colors ${
-                  address.trim() 
-                    ? paymentMethod === 'vnpay'
-                      ? 'bg-blue-600 hover:bg-blue-700' 
-                      : 'bg-green-600 hover:bg-green-700'
-                    : 'bg-gray-300 cursor-not-allowed'
-                }`}
-                onClick={paymentMethod === 'vnpay' ? createLocalPaymentRef : handleCODOrder}
+                className={`w-full py-3 rounded-lg font-semibold text-white transition-colors ${address.trim()
+                  ? paymentMethod === 'qr'
+                    ? 'bg-purple-600 hover:bg-purple-700'
+                    : 'bg-green-600 hover:bg-green-700'
+                  : 'bg-gray-300 cursor-not-allowed'
+                  }`}
+                onClick={paymentMethod === 'qr' ? handleQRPaymentOrder : handleCODOrder}
                 disabled={!address.trim()}
               >
-                {paymentMethod === 'vnpay' 
-                  ? '💳 Thanh toán qua VNPay' 
+                {paymentMethod === 'qr'
+                  ? '📱 Thanh toán qua QR'
                   : '💵 Đặt hàng COD'}
               </button>
 

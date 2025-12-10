@@ -54,11 +54,11 @@ export const ProductList: React.FC<{ addToCart?: (product: any) => void }> = ({ 
       try {
         setLoading(true);
         setError(null);
-        
+
         // Call GET /Products API
         const response = await apiClient.client.get('/Products');
         const data = response?.data?.data ?? response?.data;
-        
+
         // Filter only active products
         const activeProducts: Product[] = (Array.isArray(data) ? data : [])
           .filter((p: any) => p.isActive === true)
@@ -78,7 +78,7 @@ export const ProductList: React.FC<{ addToCart?: (product: any) => void }> = ({ 
             price: p.referencePrice,
             quantity: `${p.stockQuantity} cái`
           }));
-        
+
         setAllProducts(activeProducts);
         console.log('✅ Loaded', activeProducts.length, 'active products from API');
       } catch (err: any) {
@@ -124,7 +124,7 @@ export const ProductList: React.FC<{ addToCart?: (product: any) => void }> = ({ 
   }
 
   // Lấy tất cả sản phẩm từ các danh mục đã lọc
-  const allFilteredProducts = filteredCategories.flatMap(cat => 
+  const allFilteredProducts = filteredCategories.flatMap(cat =>
     cat.products.map(p => ({ ...p, category: cat.name }))
   );
 
@@ -169,13 +169,13 @@ export const ProductList: React.FC<{ addToCart?: (product: any) => void }> = ({ 
   return (
     <div className="bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 min-h-screen py-8 font-sans">
       <div className="max-w-7xl mx-auto px-4">
-        {/* Hero Search Section */}
-        <div className="mb-8 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-2xl p-8 shadow-2xl">
+        {/* Hero Search Section - More compact */}
+        <div className="mb-6 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-2xl p-6 shadow-2xl">
           <div className="max-w-3xl mx-auto">
-            <h1 className="text-3xl md:text-4xl font-bold text-white text-center mb-4">
+            <h1 className="text-2xl md:text-3xl font-bold text-white text-center mb-3">
               🛒 Khám phá hàng nghìn sản phẩm chất lượng
             </h1>
-            <p className="text-white/90 text-center mb-6">
+            <p className="text-white/90 text-center mb-4 text-sm md:text-base">
               Tìm kiếm và mua sắm dễ dàng với giá tốt nhất thị trường
             </p>
             <SearchBar />
@@ -198,8 +198,8 @@ export const ProductList: React.FC<{ addToCart?: (product: any) => void }> = ({ 
                 {selectedCategory === 'Tất cả' ? 'Tất cả sản phẩm' : selectedCategory}
               </h2>
               <p className="text-sm text-gray-500">
-                {selectedCategory === 'Tất cả' 
-                  ? `${allFilteredProducts.length} sản phẩm có sẵn` 
+                {selectedCategory === 'Tất cả'
+                  ? `${allFilteredProducts.length} sản phẩm có sẵn`
                   : `${productsForSelectedCategory.length} sản phẩm`
                 }
               </p>
@@ -229,7 +229,7 @@ export const ProductList: React.FC<{ addToCart?: (product: any) => void }> = ({ 
                         <p className="text-white/80 text-sm">{category.products.length} sản phẩm</p>
                       </div>
                     </div>
-                    <button 
+                    <button
                       onClick={() => setSelectedCategory(category.name)}
                       className="bg-white text-blue-600 px-4 py-2 rounded-full font-semibold hover:shadow-lg transform hover:scale-105 transition-all"
                     >
@@ -238,11 +238,11 @@ export const ProductList: React.FC<{ addToCart?: (product: any) => void }> = ({ 
                   </div>
                 </div>
 
-                {/* Products Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+                {/* Products Grid - Larger cards with fewer columns */}
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
                   {category.products.map((product, idx) => (
-                    <div 
-                      key={idx} 
+                    <div
+                      key={idx}
                       className="transform hover:scale-105 transition-all duration-300"
                       style={{ animationDelay: `${idx * 0.05}s` }}
                     >
@@ -254,11 +254,11 @@ export const ProductList: React.FC<{ addToCart?: (product: any) => void }> = ({ 
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-xl p-6">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
               {productsForSelectedCategory.map((product, idx) => (
-                <div 
-                  key={idx} 
+                <div
+                  key={idx}
                   className="transform hover:scale-105 transition-all duration-300 animate-fade-in"
                   style={{ animationDelay: `${idx * 0.05}s` }}
                 >
@@ -266,14 +266,14 @@ export const ProductList: React.FC<{ addToCart?: (product: any) => void }> = ({ 
                 </div>
               ))}
             </div>
-            
+
             {/* Empty State */}
             {productsForSelectedCategory.length === 0 && (
               <div className="text-center py-16">
                 <div className="text-6xl mb-4">😕</div>
                 <h3 className="text-xl font-bold text-gray-700 mb-2">Không tìm thấy sản phẩm</h3>
                 <p className="text-gray-500 mb-4">Thử tìm kiếm với từ khóa khác</p>
-                <button 
+                <button
                   onClick={() => setSelectedCategory('Tất cả')}
                   className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-full font-bold hover:shadow-lg transform hover:scale-105 transition-all"
                 >

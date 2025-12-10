@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Package, Clock, MapPin, CheckCircle, XCircle, Truck, RefreshCw, AlertCircle, ArrowLeft, Edit3, User } from 'lucide-react';
 import { orderService, OrderDto, OrderStatus } from '../../services/orderService';
+import { productService } from '../../services/productService';
 import { logger } from '../../utils/logger';
 import { showAppToast } from '../../utils/toast';
 
@@ -31,22 +32,22 @@ const SellerOrderDetail: React.FC = () => {
       setLoading(true);
       setError('');
       logger.debug('SellerOrderDetail', 'fetching order', { orderId });
-      
+
       // Use seller-specific API to get order detail
       const response = await orderService.getReceivedOrderById(orderId);
-      
+
       let orderData: OrderDto | null = null;
-      
+
       if ((response as any)?.success && (response as any)?.data) {
         orderData = (response as any).data;
       } else if ((response as any)?.id) {
         orderData = response as OrderDto;
       }
-      
+
       if (orderData && orderData.id) {
         setOrder(orderData);
         setSelectedStatus(orderData.status);
-        logger.info('SellerOrderDetail', 'order loaded', { 
+        logger.info('SellerOrderDetail', 'order loaded', {
           orderId: orderData.id,
           itemsCount: ((orderData as any).orderItems || []).length
         });
@@ -61,21 +62,96 @@ const SellerOrderDetail: React.FC = () => {
     }
   };
 
+  const handleInventoryReduction = async () => {
+    const items = (order as any).orderItems || [];
+
+    if (items.length === 0) {
+      logger.warn('SellerOrderDetail', 'No items to reduce inventory');
+      return;
+    }
+
+    const inventoryUpdates: Promise<void>[] = [];
+    const errors: string[] = [];
+    const successLogs: string[] = [];
+
+    for (const item of items) {
+      try {
+        // Get current product to check stock
+        const product = await productService.getProductById(item.productId);
+        const currentStock = product.stockQuantity || 0;
+        const orderedQty = item.quantity || 0;
+        const newStock = currentStock - orderedQty;
+
+        if (newStock < 0) {
+          errors.push(`${item.productName}: Kho không đủ (còn ${currentStock}, cần ${orderedQty})`);
+          logger.warn('SellerOrderDetail', 'insufficient stock', {
+            productId: item.productId,
+            productName: item.productName,
+            currentStock,
+            orderedQty
+          });
+          continue;
+        }
+
+        // Update inventory
+        inventoryUpdates.push(
+          productService.updateInventory(item.productId, newStock)
+        );
+
+        successLogs.push(`${item.productName}: ${currentStock} → ${newStock}`);
+
+        logger.info('SellerOrderDetail', 'reducing inventory', {
+          productId: item.productId,
+          productName: item.productName,
+          oldStock: currentStock,
+          newStock: newStock,
+          quantity: orderedQty
+        });
+
+      } catch (error: any) {
+        errors.push(`${item.productName}: ${error.message}`);
+        logger.error('SellerOrderDetail', 'failed to reduce inventory for item', {
+          productId: item.productId,
+          error
+        });
+      }
+    }
+
+    // Execute all updates
+    if (inventoryUpdates.length > 0) {
+      await Promise.all(inventoryUpdates);
+      showAppToast(`✅ Đã cập nhật kho cho ${inventoryUpdates.length} sản phẩm`, 'success', 2500);
+      logger.info('SellerOrderDetail', 'inventory update complete', { count: inventoryUpdates.length, details: successLogs });
+    }
+
+    // Show errors if any
+    if (errors.length > 0) {
+      showAppToast(`⚠️ Lỗi cập nhật kho:\n${errors.join('\n')}`, 'warning', 4000);
+    }
+  };
+
   const handleUpdateStatus = async () => {
     if (!order || !selectedStatus) return;
-    
+
     try {
       setUpdating(true);
-      logger.info('SellerOrderDetail', 'updating order status', { 
-        orderId: order.id, 
+      logger.info('SellerOrderDetail', 'updating order status', {
+        orderId: order.id,
         newStatus: selectedStatus,
-        notes: statusNotes 
+        notes: statusNotes
       });
 
+      // Step 1: Update order status
       await orderService.updateOrderStatus(order.id, selectedStatus, statusNotes);
-      
+
+      // Step 2: If status is Delivered, reduce inventory
+      if (selectedStatus.toLowerCase() === 'delivered') {
+        logger.info('SellerOrderDetail', 'order delivered, reducing inventory');
+        await handleInventoryReduction();
+      }
+
       showAppToast(`Đã cập nhật trạng thái đơn hàng thành ${getStatusText(selectedStatus)}`, 'success', 3000);
-      
+
       // Reload order to get updated data
       await loadOrderDetail(order.id);
       setShowStatusModal(false);
@@ -311,7 +387,7 @@ const SellerOrderDetail: React.FC = () => {
             {(() => {
               // Backend returns orderItems (camelCase) as confirmed from console
               const items = (order as any).orderItems || [];
-              
+
               return (
                 <div className="mb-4">
                   <h3 className="text-sm font-semibold text-gray-600 mb-3">Sản phẩm đã đặt</h3>
@@ -329,8 +405,8 @@ const SellerOrderDetail: React.FC = () => {
                         <div key={item.id || idx} className="flex items-start gap-4 p-4 bg-gradient-to-r from-gray-50 to-orange-50 rounded-xl hover:shadow-md transition-all border border-gray-200">
                           <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-white border-2 border-gray-200">
                             {item.productImage && item.productImage.trim() !== '' ? (
-                              <img 
-                                src={item.productImage} 
+                              <img
+                                src={item.productImage}
                                 alt={item.productName || 'Sản phẩm'}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
@@ -412,7 +488,7 @@ const SellerOrderDetail: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
             <h3 className="text-xl font-bold text-gray-900 mb-4">Cập nhật trạng thái đơn hàng</h3>
-            
+
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Trạng thái hiện tại: <span className="text-blue-600">{getStatusText(order.status)}</span>

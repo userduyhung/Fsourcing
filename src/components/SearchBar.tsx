@@ -52,11 +52,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
       setShowSuggestions(false);
       return;
     }
-    
+
     const filtered = allSuggestions.filter(item =>
       item.toLowerCase().includes(query.toLowerCase())
     ).slice(0, 5);
-    
+
     setSuggestions(filtered);
     setShowSuggestions(filtered.length > 0);
   };
@@ -100,11 +100,14 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
 
   // --- Product Search Integration ---
   const handleProductSearch = () => {
+    console.log('🔍 Search triggered:', { searchQuery, industry: filters.industry });
+
     // Save to history only if there's a query
     if (searchQuery.trim()) {
       saveToHistory(searchQuery);
     }
     setShowSuggestions(false);
+
     // Navigate to /products with search query and optional industry filter
     const query = searchQuery.trim();
     const industry = filters.industry;
@@ -112,12 +115,14 @@ const SearchBar: React.FC<SearchBarProps> = ({ className = "" }) => {
     if (query) params.set('search', query);
     if (industry) params.set('industry', industry);
     const url = `/products${params.toString() ? '?' + params.toString() : ''}`;
+
+    console.log('📍 Navigating to:', url);
     window.location.href = url;
   };
 
   return (
     <div className={`relative ${className} font-sans`}>
-  <div className="flex flex-col sm:flex-row bg-white rounded-lg shadow-lg border border-gray-200 max-w-4xl mx-auto">
+      <div className="flex flex-col sm:flex-row bg-white rounded-lg shadow-lg border border-gray-200 max-w-4xl mx-auto">
         <div className="relative sm:min-w-[120px] overflow-visible">
           <button
             type="button"

@@ -21,6 +21,7 @@ export interface ProductDto {
   createdAt: string;
   updatedAt?: string;
   isActive?: boolean;
+  stockQuantity?: number;
 }
 
 export interface CreateProductDto {

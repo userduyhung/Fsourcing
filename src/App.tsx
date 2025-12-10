@@ -31,6 +31,7 @@ import CartModal from './components/CartModal';
 import ToastListener from './components/ToastListener';
 import CartPage from './pages/buyer/CartPage';
 import CheckoutPage from './pages/buyer/CheckoutPage';
+import QRPaymentPage from './pages/buyer/QRPaymentPage';
 import { getCart } from './services/cartService';
 import { sanitizeCartItems } from './utils/cartValidation';
 
@@ -66,7 +67,7 @@ const EditProductWrapper = () => {
 }
 
 function App() {
-  const [user, setUser] = useState<{name: string, role: string} | null>(null);
+  const [user, setUser] = useState<{ name: string, role: string } | null>(null);
   // State giỏ hàng
   const [cart, setCart] = useState<CartItem[]>([]);
   // State hiển thị modal giỏ hàng
@@ -91,31 +92,31 @@ function App() {
   useEffect(() => {
     const checkUserSession = () => {
       console.log('🔍 App.tsx: Checking user session...');
-      
+
       const adminToken = localStorage.getItem('adminToken');
       const buyerToken = localStorage.getItem('buyerToken');
       const sellerToken = localStorage.getItem('sellerToken');
       const userName = localStorage.getItem('userName');
       const userRole = localStorage.getItem('userRole');
-      
-      console.log('📊 App.tsx: Session data:', { 
-        hasBuyerToken: !!buyerToken, 
-        userName, 
-        userRole 
+
+      console.log('📊 App.tsx: Session data:', {
+        hasBuyerToken: !!buyerToken,
+        userName,
+        userRole
       });
-      
+
       // Nếu là buyer, ưu tiên lấy tên từ buyerProfile
       if (buyerToken && userRole === 'buyer') {
         const buyerProfile = localStorage.getItem('buyerProfile');
         console.log('🔍 App.tsx: Checking buyerProfile for buyer...');
-        
+
         if (buyerProfile) {
           try {
             const profile = JSON.parse(buyerProfile);
             console.log('📦 App.tsx: Parsed buyerProfile:', profile);
             console.log('📦 App.tsx: profile.fullName =', profile.fullName);
             console.log('📦 App.tsx: profile.name =', profile.name);
-            
+
             if (profile && (profile.fullName || profile.name)) {
               // Ignore values that are clearly emails (avoid showing email as display name)
               const isEmailLike = (val: any) => typeof val === 'string' && /\S+@\S+\.\S+/.test(val);
@@ -140,17 +141,17 @@ function App() {
           console.warn('⚠️ App.tsx: No buyerProfile in localStorage');
         }
       }
-      
+
       // Nếu là seller, ưu tiên lấy tên từ sellerProfile
       if (sellerToken && userRole === 'seller') {
         const sellerProfile = localStorage.getItem('sellerProfile');
         console.log('🔍 App.tsx: Checking sellerProfile for seller...');
-        
+
         if (sellerProfile) {
           try {
             const profile = JSON.parse(sellerProfile);
             console.log('📦 App.tsx: Parsed sellerProfile:', profile);
-            
+
             // Seller profile có thể có companyName hoặc contactName hoặc fullName
             if (profile && (profile.companyName || profile.contactName || profile.fullName || profile.name)) {
               const displayName = profile.companyName || profile.contactName || profile.fullName || profile.name || 'Seller';
@@ -164,7 +165,7 @@ function App() {
           }
         }
       }
-      
+
       if ((adminToken || buyerToken || sellerToken) && userName && userRole) {
         console.log('✅ App.tsx: Setting user from userName:', userName);
         setUser({ name: userName, role: userRole });
@@ -176,18 +177,18 @@ function App() {
 
     console.log('🚀 App.tsx: Setting up user session listeners...');
     checkUserSession();
-    
+
     // Listen for storage changes (when user logs in from another tab)
     window.addEventListener('storage', checkUserSession);
-    
+
     // Listen for login events
     const handleUserLoggedIn = () => {
       console.log('📢 App.tsx: Received userLoggedIn event!');
       checkUserSession();
     };
-    
+
     window.addEventListener('userLoggedIn', handleUserLoggedIn);
-    
+
     return () => {
       window.removeEventListener('storage', checkUserSession);
       window.removeEventListener('userLoggedIn', handleUserLoggedIn);
@@ -299,161 +300,161 @@ function App() {
             ) : user && user.role === 'admin' ? (
               <Navigate to="/admin/dashboard" replace />
             ) : (
-            <>
-              {/* <ChatWidget /> */}
-              {/* Hero Section - Cải thiện cho Buyer */}
-              <section className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 pt-16 pb-20 relative overflow-hidden">
-                <div className="absolute inset-0 opacity-5">
-                  <div className="absolute top-20 left-10 w-72 h-72 bg-blue-400 rounded-full filter blur-3xl animate-pulse"></div>
-                  <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-400 rounded-full filter blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
-                </div>
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-                  {/* Banner khuyến mãi động cho Buyer */}
-                  {user && user.role === 'buyer' && (
-                    <div className="mb-8 bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 rounded-2xl p-1 shadow-2xl animate-gradient">
-                      <div className="bg-white rounded-xl p-6 flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="bg-gradient-to-br from-red-500 to-orange-500 rounded-full p-3 animate-bounce">
-                            <Star className="h-8 w-8 text-white" />
+              <>
+                {/* <ChatWidget /> */}
+                {/* Hero Section - Cải thiện cho Buyer */}
+                <section className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 pt-16 pb-20 relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-5">
+                    <div className="absolute top-20 left-10 w-72 h-72 bg-blue-400 rounded-full filter blur-3xl animate-pulse"></div>
+                    <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-400 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+                  </div>
+                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                    {/* Banner khuyến mãi động cho Buyer */}
+                    {user && user.role === 'buyer' && (
+                      <div className="mb-8 bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 rounded-2xl p-1 shadow-2xl animate-gradient">
+                        <div className="bg-white rounded-xl p-6 flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <div className="bg-gradient-to-br from-red-500 to-orange-500 rounded-full p-3 animate-bounce">
+                              <Star className="h-8 w-8 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="text-2xl font-bold text-gray-900">🎉 Chào mừng {user.name}!</h3>
+                              <p className="text-gray-600 font-semibold">Giảm giá đến 30% cho đơn hàng đầu tiên trong tuần này!</p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="text-2xl font-bold text-gray-900">🎉 Chào mừng {user.name}!</h3>
-                            <p className="text-gray-600 font-semibold">Giảm giá đến 30% cho đơn hàng đầu tiên trong tuần này!</p>
-                          </div>
+                          <Link to="/products" className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-full font-bold hover:shadow-lg transform hover:scale-105 transition-all">
+                            Mua ngay
+                          </Link>
                         </div>
-                        <Link to="/products" className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-full font-bold hover:shadow-lg transform hover:scale-105 transition-all">
-                          Mua ngay
-                        </Link>
                       </div>
-                    </div>
-                  )}
-                  
-                  <div className="text-center">
-                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 font-sans animate-fade-in">
-                      <span className="inline-block">Khám phá sản phẩm chất lượng</span>
-                      <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent inline-block"> cho doanh nghiệp của bạn</span>
-                    </h1>
-                    <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto font-sans">
-                      Tìm các sản phẩm đáng tin cậy, tối ưu hóa quy trình mua sắm với nền tảng B2B tiện lợi.
-                    </p>
-                    {/* Search Bar */}
-                    <div className="mb-12">
-                      <SearchBar />
-                    </div>
-                    
-                    {/* Hero Image với hiệu ứng */}
-                    <div className="relative max-w-4xl mx-auto">
-                      <div className="absolute -inset-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-2xl blur-2xl opacity-20 animate-pulse"></div>
-                      <div className="relative bg-white rounded-xl shadow-2xl p-4 transform hover:scale-[1.02] transition-transform duration-300">
-                        <img
-                          src="https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg"
-                          alt="Global Trade Platform"
-                          className="w-full h-96 object-cover rounded-lg"
-                        />
+                    )}
+
+                    <div className="text-center">
+                      <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 font-sans animate-fade-in">
+                        <span className="inline-block">Khám phá sản phẩm chất lượng</span>
+                        <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent inline-block"> cho doanh nghiệp của bạn</span>
+                      </h1>
+                      <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto font-sans">
+                        Tìm các sản phẩm đáng tin cậy, tối ưu hóa quy trình mua sắm với nền tảng B2B tiện lợi.
+                      </p>
+                      {/* Search Bar */}
+                      <div className="mb-12">
+                        <SearchBar />
+                      </div>
+
+                      {/* Hero Image với hiệu ứng */}
+                      <div className="relative max-w-4xl mx-auto">
+                        <div className="absolute -inset-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-2xl blur-2xl opacity-20 animate-pulse"></div>
+                        <div className="relative bg-white rounded-xl shadow-2xl p-4 transform hover:scale-[1.02] transition-transform duration-300">
+                          <img
+                            src="https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg"
+                            alt="Global Trade Platform"
+                            className="w-full h-96 object-cover rounded-lg"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </section>
-              
-              <ProductShowcase addToCart={addToCart} />
-              
-              {/* Các section chỉ hiển thị khi chưa đăng nhập Buyer */}
-              {!(user && user.role === 'buyer') && (
-                <>
-                  {/* Features Section */}
-                  <section className="py-20 bg-white">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                      <div className="text-center mb-16">
-                        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 font-sans">
-                          Vì sao chọn Fsourcing?
-                        </h2>
-                        <p className="text-xl text-gray-600 max-w-3xl mx-auto font-sans">
-                          Tất cả những gì bạn cần để mua hàng hiệu quả và phát triển kinh doanh toàn cầu
-                        </p>
-                      </div>
-                      <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8">
-                        <div className="text-center group">
-                          <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-200 transition-colors">
-                            <Shield className="h-8 w-8 text-blue-600" />
-                          </div>
-                          <h3 className="text-xl font-semibold text-gray-900 mb-2 font-sans">Đối tác đã xác thực</h3>
-                          <p className="text-gray-600 font-sans">Tất cả đối tác đều được kiểm duyệt nghiêm ngặt để đảm bảo uy tín và chất lượng.</p>
+                </section>
+
+                <ProductShowcase addToCart={addToCart} />
+
+                {/* Các section chỉ hiển thị khi chưa đăng nhập Buyer */}
+                {!(user && user.role === 'buyer') && (
+                  <>
+                    {/* Features Section */}
+                    <section className="py-20 bg-white">
+                      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="text-center mb-16">
+                          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 font-sans">
+                            Vì sao chọn Fsourcing?
+                          </h2>
+                          <p className="text-xl text-gray-600 max-w-3xl mx-auto font-sans">
+                            Tất cả những gì bạn cần để mua hàng hiệu quả và phát triển kinh doanh toàn cầu
+                          </p>
                         </div>
-                        {/* <div className="text-center group">
+                        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8">
+                          <div className="text-center group">
+                            <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-200 transition-colors">
+                              <Shield className="h-8 w-8 text-blue-600" />
+                            </div>
+                            <h3 className="text-xl font-semibold text-gray-900 mb-2 font-sans">Đối tác đã xác thực</h3>
+                            <p className="text-gray-600 font-sans">Tất cả đối tác đều được kiểm duyệt nghiêm ngặt để đảm bảo uy tín và chất lượng.</p>
+                          </div>
+                          {/* <div className="text-center group">
                           <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-purple-200 transition-colors">
                             <MessageCircle className="h-8 w-8 text-purple-600" />
                           </div>
                           <h3 className="text-xl font-semibold text-gray-900 mb-2 font-sans">Chat trực tiếp</h3>
                           <p className="text-gray-600 font-sans">Liên hệ và trao đổi trực tiếp với nhà cung cấp qua hệ thống chat tích hợp.</p>
                         </div> */}
-                        <div className="text-center group">
-                          <div className="bg-teal-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-teal-200 transition-colors">
-                            <Search className="h-8 w-8 text-teal-600" />
+                          <div className="text-center group">
+                            <div className="bg-teal-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-teal-200 transition-colors">
+                              <Search className="h-8 w-8 text-teal-600" />
+                            </div>
+                            <h3 className="text-xl font-semibold text-gray-900 mb-2 font-sans">Tìm kiếm thông minh</h3>
+                            <p className="text-gray-600 font-sans">Tìm kiếm thông minh giúp bạn dễ dàng tìm đúng sản phẩm cần thiết.</p>
                           </div>
-                          <h3 className="text-xl font-semibold text-gray-900 mb-2 font-sans">Tìm kiếm thông minh</h3>
-                          <p className="text-gray-600 font-sans">Tìm kiếm thông minh giúp bạn dễ dàng tìm đúng sản phẩm cần thiết.</p>
-                        </div>
-                        <div className="text-center group">
-                          <div className="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-orange-200 transition-colors">
-                            <TrendingUp className="h-8 w-8 text-orange-600" />
+                          <div className="text-center group">
+                            <div className="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-orange-200 transition-colors">
+                              <TrendingUp className="h-8 w-8 text-orange-600" />
+                            </div>
+                            <h3 className="text-xl font-semibold text-gray-900 mb-2 font-sans">Thông tin thị trường</h3>
+                            <p className="text-gray-600 font-sans">Cập nhật dữ liệu và xu hướng thị trường để ra quyết định mua hàng chính xác.</p>
                           </div>
-                          <h3 className="text-xl font-semibold text-gray-900 mb-2 font-sans">Thông tin thị trường</h3>
-                          <p className="text-gray-600 font-sans">Cập nhật dữ liệu và xu hướng thị trường để ra quyết định mua hàng chính xác.</p>
-                        </div>
-                        <div className="text-center group">
-                          <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-green-200 transition-colors">
-                            <Users className="h-8 w-8 text-green-600" />
+                          <div className="text-center group">
+                            <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-green-200 transition-colors">
+                              <Users className="h-8 w-8 text-green-600" />
+                            </div>
+                            <h3 className="text-xl font-semibold text-gray-900 mb-2 font-sans">Mạng lưới toàn cầu</h3>
+                            <p className="text-gray-600 font-sans">Kết nối với nhà cung cấp từ hơn 180 quốc gia và vùng lãnh thổ.</p>
                           </div>
-                          <h3 className="text-xl font-semibold text-gray-900 mb-2 font-sans">Mạng lưới toàn cầu</h3>
-                          <p className="text-gray-600 font-sans">Kết nối với nhà cung cấp từ hơn 180 quốc gia và vùng lãnh thổ.</p>
                         </div>
+                      </div>
+                    </section>
+
+                    {/* Supplier directory preview removed temporarily */}
+
+                    {/* Dashboard and Ready-to-Transform sections removed per request */}
+                  </>
+                )}
+
+                {/* Testimonials Section - Đánh giá khách hàng */}
+                {user && user.role === 'buyer' && (
+                  <section className="py-16 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                      <div className="text-center mb-12">
+                        <h2 className="text-4xl font-bold text-white mb-4">💬 Khách hàng nói gì về chúng tôi</h2>
+                        <p className="text-xl text-white/90">Hàng nghìn doanh nghiệp tin tưởng Fsourcing</p>
+                      </div>
+                      <div className="grid md:grid-cols-3 gap-8">
+                        {[
+                          { name: 'Nguyễn Văn A', company: 'ABC Corp', rating: 5, comment: 'Sản phẩm chất lượng, giao hàng nhanh. Tôi rất hài lòng với dịch vụ!', avatar: '👨‍💼' },
+                          { name: 'Trần Thị B', company: 'XYZ Ltd', rating: 5, comment: 'Giá cả cạnh tranh, hỗ trợ tận tình. Sẽ tiếp tục sử dụng dịch vụ.', avatar: '👩‍💼' },
+                          { name: 'Lê Minh C', company: 'DEF Inc', rating: 5, comment: 'Nền tảng dễ sử dụng, tìm được nhiều nhà cung cấp uy tín. Rất tốt!', avatar: '👨‍🔧' }
+                        ].map((testimonial, idx) => (
+                          <div key={idx} className="bg-white rounded-2xl p-6 shadow-2xl hover:shadow-3xl transform hover:-translate-y-2 transition-all">
+                            <div className="flex items-center mb-4">
+                              <div className="text-4xl mr-3">{testimonial.avatar}</div>
+                              <div>
+                                <h4 className="font-bold text-gray-900">{testimonial.name}</h4>
+                                <p className="text-sm text-gray-500">{testimonial.company}</p>
+                              </div>
+                            </div>
+                            <div className="flex mb-3">
+                              {[...Array(testimonial.rating)].map((_, i) => (
+                                <Star key={i} className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+                              ))}
+                            </div>
+                            <p className="text-gray-600 italic">"{testimonial.comment}"</p>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </section>
-
-                  {/* Supplier directory preview removed temporarily */}
-
-                  {/* Dashboard and Ready-to-Transform sections removed per request */}
-                </>
-              )}
-              
-              {/* Testimonials Section - Đánh giá khách hàng */}
-              {user && user.role === 'buyer' && (
-                <section className="py-16 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
-                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center mb-12">
-                      <h2 className="text-4xl font-bold text-white mb-4">💬 Khách hàng nói gì về chúng tôi</h2>
-                      <p className="text-xl text-white/90">Hàng nghìn doanh nghiệp tin tưởng Fsourcing</p>
-                    </div>
-                    <div className="grid md:grid-cols-3 gap-8">
-                      {[
-                        { name: 'Nguyễn Văn A', company: 'ABC Corp', rating: 5, comment: 'Sản phẩm chất lượng, giao hàng nhanh. Tôi rất hài lòng với dịch vụ!', avatar: '👨‍💼' },
-                        { name: 'Trần Thị B', company: 'XYZ Ltd', rating: 5, comment: 'Giá cả cạnh tranh, hỗ trợ tận tình. Sẽ tiếp tục sử dụng dịch vụ.', avatar: '👩‍💼' },
-                        { name: 'Lê Minh C', company: 'DEF Inc', rating: 5, comment: 'Nền tảng dễ sử dụng, tìm được nhiều nhà cung cấp uy tín. Rất tốt!', avatar: '👨‍🔧' }
-                      ].map((testimonial, idx) => (
-                        <div key={idx} className="bg-white rounded-2xl p-6 shadow-2xl hover:shadow-3xl transform hover:-translate-y-2 transition-all">
-                          <div className="flex items-center mb-4">
-                            <div className="text-4xl mr-3">{testimonial.avatar}</div>
-                            <div>
-                              <h4 className="font-bold text-gray-900">{testimonial.name}</h4>
-                              <p className="text-sm text-gray-500">{testimonial.company}</p>
-                            </div>
-                          </div>
-                          <div className="flex mb-3">
-                            {[...Array(testimonial.rating)].map((_, i) => (
-                              <Star key={i} className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-                            ))}
-                          </div>
-                          <p className="text-gray-600 italic">"{testimonial.comment}"</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </section>
-              )}
-            </>
-  )} />
+                )}
+              </>
+            )} />
           <Route path="/products" element={
             <RoleGuard blockedRoles={['seller']} redirectTo={'/seller/dashboard'}>
               <ProductList addToCart={addToCart} />
@@ -552,6 +553,11 @@ function App() {
           <Route path="/buyer/checkout" element={
             <BuyerProtectedRoute>
               <CheckoutPage onClearCart={() => setCart([])} />
+            </BuyerProtectedRoute>
+          } />
+          <Route path="/buyer/qr-payment/:orderId" element={
+            <BuyerProtectedRoute>
+              <QRPaymentPage />
             </BuyerProtectedRoute>
           } />
         </Routes>

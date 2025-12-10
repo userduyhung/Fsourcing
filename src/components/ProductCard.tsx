@@ -42,7 +42,7 @@ const ProductCard: React.FC<ProductCardProps & { onAddToCart?: (product: any) =>
     try {
       // parse an integer amount in VND from display string like "12.000 ₫" -> 12000
       const numeric = parseInt(String(price).replace(/[^\d]/g, ''), 10) || 0;
-      
+
       // Validate product has valid id (GUID required by backend)
       if (!id) {
         console.error('Product missing id:', { name, price, quantity });
@@ -77,16 +77,16 @@ const ProductCard: React.FC<ProductCardProps & { onAddToCart?: (product: any) =>
       >
         <ShoppingCart className="h-5 w-5 text-blue-600" />
       </button>
-      
+
       {/* Image container with fixed height */}
       <div className="w-full h-32 flex items-center justify-center mb-3">
         <img src={image} alt={name} className="max-w-full max-h-full object-contain rounded-md" />
       </div>
-      
+
       {/* Content container with flex-grow */}
       <div className="w-full flex-grow flex flex-col">
         <div className="font-bold text-base text-gray-900 mb-1 font-sans">
-          {typeof price === 'number' 
+          {typeof price === 'number'
             ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price)
             : price}
         </div>

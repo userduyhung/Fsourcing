@@ -19,7 +19,7 @@ interface Product {
 const EditProduct: React.FC<{ productId: string }> = ({ productId }) => {
   const navigate = useNavigate();
   const { showSuccess, showError } = useApiToast();
-  
+
   const [product, setProduct] = useState<Product | null>(null);
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
@@ -30,7 +30,7 @@ const EditProduct: React.FC<{ productId: string }> = ({ productId }) => {
   const [image, setImage] = useState('');
   const [loading, setLoading] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  
+
   // Image upload states (Cloudinary)
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -54,38 +54,57 @@ const EditProduct: React.FC<{ productId: string }> = ({ productId }) => {
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
-    
+
     const fetchProduct = async () => {
       try {
-        const resp = await apiClient.client.get(`/Products/${productId}`);
+        // Use seller-specific endpoint to get products with stockQuantity
+        // GET /products returns seller's products with full data including stockQuantity
+        const resp = await apiClient.client.get('/Products');
         const data = resp?.data?.data ?? resp?.data;
-        
-        if (isMounted && data) {
+
+        console.log('🔍 [DEBUG] EditProduct - Full API response (seller products):', resp);
+        console.log('🔍 [DEBUG] EditProduct - Extracted data:', data);
+        console.log('🔍 [DEBUG] EditProduct - Is array?', Array.isArray(data));
+
+        // Find the specific product by ID from seller's products
+        const products = Array.isArray(data) ? data : [];
+        const foundProduct = products.find((p: any) => p.id === productId);
+
+        console.log('🔍 [DEBUG] EditProduct - Total products:', products.length);
+        console.log('🔍 [DEBUG] EditProduct - Found product:', foundProduct);
+        console.log('🔍 [DEBUG] EditProduct - stockQuantity from found product:', foundProduct?.stockQuantity);
+
+        if (isMounted && foundProduct) {
           const productData: Product = {
-            id: data.id,
-            name: data.name,
-            referencePrice: data.referencePrice || data.price || 0,
-            stockQuantity: data.stockQuantity || 0,
-            description: data.description,
-            imagePath: data.imagePath || data.image,
-            category: data.category,
-            isActive: data.isActive
+            id: foundProduct.id,
+            name: foundProduct.name,
+            referencePrice: foundProduct.referencePrice || foundProduct.price || 0,
+            stockQuantity: foundProduct.stockQuantity ?? foundProduct.quantity ?? 0,
+            description: foundProduct.description,
+            imagePath: foundProduct.imagePath || foundProduct.image,
+            category: foundProduct.category,
+            isActive: foundProduct.isActive
           };
-          
+
+          console.log('🔍 [DEBUG] EditProduct - Mapped product data:', productData);
+          console.log('🔍 [DEBUG] EditProduct - Mapped stockQuantity:', productData.stockQuantity);
+
           setProduct(productData);
           setName(productData.name);
           setPrice(productData.referencePrice.toString());
           setDisplayPrice(productData.referencePrice.toLocaleString('vi-VN'));
-          setStockQuantity((productData.stockQuantity || 0).toString());
+          setStockQuantity((productData.stockQuantity ?? 0).toString());
           setDescription(productData.description || '');
           setCategory(productData.category || '');
           setImage(productData.imagePath || '');
-          
-          logger.info('EditProduct', 'product loaded from API', { productId, name: productData.name });
+
+          console.log('🔍 [DEBUG] EditProduct - State set - stockQuantity:', (productData.stockQuantity ?? 0).toString());
+
+          logger.info('EditProduct', 'product loaded from seller products', { productId, name: productData.name, stockQuantity: productData.stockQuantity });
         } else if (isMounted) {
           setProduct(null);
-          showError('Không tìm thấy sản phẩm');
-          logger.warn('EditProduct', 'product not found', { productId });
+          showError('Không tìm thấy sản phẩm hoặc bạn không có quyền chỉnh sửa');
+          logger.warn('EditProduct', 'product not found in seller products', { productId, totalProducts: products?.length || 0 });
         }
       } catch (err: any) {
         logger.error('EditProduct', 'failed to fetch product', { productId, error: err.message || err });
@@ -96,7 +115,7 @@ const EditProduct: React.FC<{ productId: string }> = ({ productId }) => {
         if (isMounted) setLoading(false);
       }
     };
-    
+
     fetchProduct();
     return () => { isMounted = false; };
   }, [productId]); // Remove showError from dependencies to prevent infinite loop
@@ -117,7 +136,7 @@ const EditProduct: React.FC<{ productId: string }> = ({ productId }) => {
       }
 
       setImageFile(file);
-      
+
       // Create preview URL
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
@@ -138,12 +157,12 @@ const EditProduct: React.FC<{ productId: string }> = ({ productId }) => {
       // Cloudinary configuration from environment variables
       const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
       const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
-      
+
       // Validate configuration
       if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
         throw new Error('Cloudinary chưa được cấu hình. Vui lòng thêm VITE_CLOUDINARY_CLOUD_NAME và VITE_CLOUDINARY_UPLOAD_PRESET vào file .env');
       }
-      
+
       // Tạo FormData để upload
       const formData = new FormData();
       formData.append('file', file);
@@ -169,7 +188,7 @@ const EditProduct: React.FC<{ productId: string }> = ({ productId }) => {
       }
 
       const data = await response.json();
-      
+
       // Cloudinary trả về secure_url (HTTPS URL)
       const imageUrl = data.secure_url;
 
@@ -179,8 +198,8 @@ const EditProduct: React.FC<{ productId: string }> = ({ productId }) => {
       setImage(imageUrl); // Update image state with Cloudinary URL
       setUploadProgress(100);
       showSuccess('✅ Upload ảnh lên Cloudinary thành công!');
-      
-      logger.info('EditProduct', 'Image uploaded to Cloudinary', { 
+
+      logger.info('EditProduct', 'Image uploaded to Cloudinary', {
         imageUrl,
         publicId: data.public_id,
         format: data.format,
@@ -201,7 +220,7 @@ const EditProduct: React.FC<{ productId: string }> = ({ productId }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!product) return;
-    
+
     setIsSubmitting(true);
 
     try {
@@ -241,7 +260,7 @@ const EditProduct: React.FC<{ productId: string }> = ({ productId }) => {
       logger.debug('EditProduct', 'updating product', { productId, payload });
 
       await apiClient.client.put(`/Products/${productId}`, payload);
-      
+
       // ✅ Update stock quantity via separate inventory endpoint
       // Backend uses PUT /Products/{id}/inventory endpoint for stock quantity
       if (quantity !== (product?.stockQuantity || 0)) {
@@ -249,7 +268,7 @@ const EditProduct: React.FC<{ productId: string }> = ({ productId }) => {
           await apiClient.client.put(`/Products/${productId}/inventory`, {
             quantity: quantity
           });
-          logger.info('EditProduct', 'inventory updated', { 
+          logger.info('EditProduct', 'inventory updated', {
             productId: productId,
             oldQuantity: product?.stockQuantity || 0,
             newQuantity: quantity
@@ -260,14 +279,14 @@ const EditProduct: React.FC<{ productId: string }> = ({ productId }) => {
           console.warn('⚠️ Failed to update stock quantity:', inventoryError);
         }
       }
-      
+
       showSuccess('✅ Cập nhật sản phẩm thành công!');
       logger.info('EditProduct', 'product updated successfully', { productId, name });
 
       // Dispatch event to refresh product list
       try {
-        window.dispatchEvent(new CustomEvent('sellerProductsUpdated', { 
-          detail: { productId } 
+        window.dispatchEvent(new CustomEvent('sellerProductsUpdated', {
+          detail: { productId }
         }));
       } catch (e) {
         window.dispatchEvent(new Event('sellerProductsUpdated'));
@@ -275,19 +294,19 @@ const EditProduct: React.FC<{ productId: string }> = ({ productId }) => {
 
       // Navigate back after short delay
       setTimeout(() => navigate('/seller/products'), 1000);
-      
+
     } catch (err: any) {
-      logger.error('EditProduct', 'failed to update product', { 
-        productId, 
+      logger.error('EditProduct', 'failed to update product', {
+        productId,
         error: err.message || err,
-        response: err?.response?.data 
+        response: err?.response?.data
       });
-      
-      const errorMsg = err?.response?.data?.error 
-        || err?.response?.data?.message 
-        || err?.message 
+
+      const errorMsg = err?.response?.data?.error
+        || err?.response?.data?.message
+        || err?.message
         || 'Cập nhật thất bại. Vui lòng thử lại.';
-      
+
       showError(errorMsg);
     } finally {
       setIsSubmitting(false);
@@ -326,7 +345,7 @@ const EditProduct: React.FC<{ productId: string }> = ({ productId }) => {
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-2xl shadow-lg p-8">
           <h2 className="text-3xl font-bold mb-8 text-gray-900">Chỉnh sửa sản phẩm</h2>
-          
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">
@@ -419,7 +438,7 @@ const EditProduct: React.FC<{ productId: string }> = ({ productId }) => {
               <label className="block text-sm font-bold text-gray-700 mb-2">
                 Hình ảnh sản phẩm
               </label>
-              
+
               {/* File Upload Button */}
               <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-500 transition-all">
                 <input
