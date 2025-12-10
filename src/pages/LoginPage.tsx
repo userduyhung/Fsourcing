@@ -8,7 +8,7 @@ const LoginPage: React.FC = () => {
   const [role, setRole] = useState<'buyer' | 'seller'>('buyer');
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -34,7 +34,7 @@ const LoginPage: React.FC = () => {
   }, []);
 
   const validateForm = () => {
-    const newErrors: {[key: string]: string} = {};
+    const newErrors: { [key: string]: string } = {};
     if (!formData.email.trim()) {
       newErrors.email = 'Email không được để trống';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -114,7 +114,7 @@ const LoginPage: React.FC = () => {
             sessionStorage.removeItem('registeredPassword');
             sessionStorage.removeItem('registeredFullName');
             sessionStorage.removeItem('justRegistered');
-            try { localStorage.setItem('userEmail', resp.user.email || formData.email); } catch {}
+            try { localStorage.setItem('userEmail', resp.user.email || formData.email); } catch { }
             setIsLoading(false);
             navigate('/buyer/profile', { state: { isFirstLogin: true } });
           } else {
@@ -124,7 +124,7 @@ const LoginPage: React.FC = () => {
             sessionStorage.removeItem('registeredFullName');
             sessionStorage.removeItem('justRegistered');
             // persist email for older dashboard flows
-            try { localStorage.setItem('userEmail', resp.user.email || formData.email); } catch {}
+            try { localStorage.setItem('userEmail', resp.user.email || formData.email); } catch { }
             navigate(redirectTo);
           }
         } else if (roleFromResp === 'seller') {
@@ -175,13 +175,13 @@ const LoginPage: React.FC = () => {
             sessionStorage.removeItem('registeredPassword');
             sessionStorage.removeItem('registeredFullName');
             sessionStorage.removeItem('justRegistered');
-            try { localStorage.setItem('userEmail', resp.user.email || formData.email); } catch {}
+            try { localStorage.setItem('userEmail', resp.user.email || formData.email); } catch { }
             navigate('/seller/profile', { state: { isFirstLogin: true } });
           } else if (!firstSellerRedirect) {
             localStorage.setItem('sellerFirstLoginRedirectDone', '1');
             navigate('/seller/add-product');
           } else {
-            try { localStorage.setItem('userEmail', resp.user.email || formData.email); } catch {}
+            try { localStorage.setItem('userEmail', resp.user.email || formData.email); } catch { }
             navigate(redirectTo);
           }
         } else if (roleFromResp === 'admin') {
@@ -309,8 +309,8 @@ const LoginPage: React.FC = () => {
             {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>
 
-          {/* Nút đăng nhập với tư cách Admin luôn hiển thị */}
-          <div className="w-full flex justify-center mt-2">
+          {/* Nút đăng nhập với tư cách Admin đã được ẩn - sử dụng trang admin riêng */}
+          {/* <div className="w-full flex justify-center mt-2">
             <button
               type="button"
               onClick={() => navigate('/admin/login')}
@@ -318,7 +318,7 @@ const LoginPage: React.FC = () => {
             >
               Đăng nhập với tư cách Admin
             </button>
-          </div>
+          </div> */}
 
           <div className="text-center space-y-2">
             {role === 'buyer' && (
