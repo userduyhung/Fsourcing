@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import showAppToast from '../utils/toast';
-import { productsApi } from '../services/apiClient';
+import apiClient, { productsApi } from '../services/apiClient';
 import { addCartItem } from '../services/cartService';
 import { validateProduct, validateAuthentication } from '../utils/purchaseValidation';
 import { CartItem } from '../types';
@@ -27,6 +27,8 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ addToCart }) => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [fetchedProduct, setFetchedProduct] = useState<any>(null);
+  const [sellerName, setSellerName] = useState<string | null>(null);
+  const [sellerProfileId, setSellerProfileId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const product = location.state?.product ?? fetchedProduct;
@@ -41,10 +43,37 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ addToCart }) => {
       setLoading(true);
       setError(null);
       productsApi.get(id)
-        .then((response: any) => {
+        .then(async (response: any) => {
           // Handle both response.data and direct response
-          const productData = response?.data || response;
+          const wrapper = response?.data || response;
+          const productData = wrapper?.data || wrapper;
           setFetchedProduct(productData);
+
+          // Extract seller profile id from common fields
+          const sellerId = productData?.sellerId || productData?.sellerProfileId || productData?.seller || productData?.data?.sellerId || productData?.data?.sellerProfileId;
+          if (sellerId) {
+            setSellerProfileId(String(sellerId));
+            // If product already contains seller display name, use it
+            // Prefer explicit SellerCompanyName from backend (pascal/camel variants),
+            // fall back to sellerName or nested seller.companyName. Avoid using the
+            // product name accidentally if backend mis-maps fields.
+            const existingName = productData?.sellerCompanyName || productData?.SellerCompanyName || productData?.sellerName || productData?.seller?.companyName || productData?.seller?.name || productData?.companyName;
+            if (existingName && String(existingName).trim() !== String(productData?.name || '').trim()) {
+              setSellerName(existingName);
+            } else {
+              // Try to fetch profile display name
+              try {
+                const resp = await apiClient.client.get(`/Profile/${encodeURIComponent(String(sellerId))}`);
+                const profile = resp?.data?.data || resp?.data || resp;
+                const display = profile?.companyName || profile?.CompanyName || profile?.contactName || profile?.fullName || profile?.name || '';
+                if (display) setSellerName(display);
+              } catch (e) {
+                // ignore profile fetch errors
+                console.warn('Could not fetch seller profile for display name', e);
+              }
+            }
+          }
+
           setLoading(false);
         })
         .catch((err: any) => {
@@ -62,6 +91,67 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ addToCart }) => {
       setMainImage(images[0]);
     }
   }, [product]);
+
+  // Log product id for debugging (helps diagnose missing/wrong id issues)
+  useEffect(() => {
+    if (product) {
+      try {
+        console.log('[ProductDetail] product id ->', product.id ?? product.Id ?? product.productId ?? '(none)', 'sellerProfileId ->', product.sellerProfileId ?? sellerProfileId ?? '(none)');
+      } catch (e) {
+        // avoid breaking render if console fails
+        // no-op
+      }
+    }
+  }, [product, sellerProfileId]);
+
+  // If product exists but sellerProfileId is missing, fetch authoritative product record
+  useEffect(() => {
+    if (!product) return;
+    // Skip if we already have a sellerProfileId
+    if (sellerProfileId) return;
+
+    const pid = product.id ?? product.Id ?? product.productId ?? product._id;
+    if (!pid) return;
+
+    const fetchAuth = async () => {
+      try {
+        console.log('[ProductDetail] fetching authoritative product for id ->', pid);
+        const resp: any = await productsApi.get(String(pid));
+        const wrapper = resp?.data || resp;
+        const data = wrapper?.data || wrapper;
+
+        // Controller returns sellerId mapped from SellerProfileId
+        const sellerIdFromResp = data?.sellerId || data?.sellerProfileId || data?.SellerProfileId;
+        if (sellerIdFromResp) {
+          setSellerProfileId(String(sellerIdFromResp));
+          console.log('[ProductDetail] fetched sellerId ->', sellerIdFromResp);
+
+          // Try to get seller display name from the product response
+              // Prefer SellerCompanyName field returned by service
+              const nameFromResp = data?.sellerCompanyName || data?.SellerCompanyName || data?.sellerName || data?.seller?.companyName || data?.companyName || data?.name;
+              if (nameFromResp && String(nameFromResp).trim() !== String(data?.name || '').trim()) {
+                setSellerName(nameFromResp);
+              } else {
+            // Fetch profile for display name as a fallback
+            try {
+              const prof = await apiClient.client.get(`/Profile/${encodeURIComponent(String(sellerIdFromResp))}`);
+              const profile = prof?.data?.data || prof?.data || prof;
+              const display = profile?.companyName || profile?.CompanyName || profile?.contactName || profile?.fullName || profile?.name || '';
+              if (display) setSellerName(display);
+            } catch (e) {
+              console.warn('[ProductDetail] failed to fetch seller profile for display name', e);
+            }
+          }
+        } else {
+          console.warn('[ProductDetail] authoritative product did not include sellerId', data);
+        }
+      } catch (err) {
+        console.warn('[ProductDetail] failed to fetch authoritative product', err);
+      }
+    };
+
+    fetchAuth();
+  }, [product, sellerProfileId]);
 
   if (loading) {
     return <div className="text-center py-20 font-sans">Đang tải sản phẩm...</div>;
@@ -234,6 +324,11 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ addToCart }) => {
                     <div className="text-sm text-gray-500 line-through">{formatPrice(product.referencePrice)}</div>
                   )}
                 </div>
+                {sellerName && (
+                  <div className="text-sm text-gray-800 mb-3">
+                    Nhà bán: <span className="font-medium text-gray-800">{sellerName}</span>
+                  </div>
+                )}
                 <div className="text-sm text-gray-600 mb-4">Số lượng sẵn có: <span className="font-medium text-gray-800">{product.quantity ?? '—'}</span></div>
 
                 <div className="mb-4">

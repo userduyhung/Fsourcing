@@ -29,6 +29,8 @@ interface Product {
   image: string;
   price: number;
   quantity: string;
+  sellerProfileId?: string;
+  sellerName?: string;
 }
 
 interface CategoryData {
@@ -63,7 +65,8 @@ export const ProductList: React.FC<{ addToCart?: (product: any) => void }> = ({ 
         const activeProducts: Product[] = (Array.isArray(data) ? data : [])
           .filter((p: any) => p.isActive === true)
           .map((p: any) => ({
-            id: p.id,
+            // Normalize id from various possible shapes returned by backend or legacy data
+            id: String(p.id ?? p.Id ?? p.productId ?? p.productID ?? p._id ?? (p.product && (p.product.id || p.product.productId)) ?? ''),
             name: p.name,
             description: p.description || 'Không có mô tả',
             imagePath: p.imagePath,
@@ -76,10 +79,42 @@ export const ProductList: React.FC<{ addToCart?: (product: any) => void }> = ({ 
             // Map to old format for compatibility
             image: p.imagePath || 'https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg',
             price: p.referencePrice,
-            quantity: `${p.stockQuantity} cái`
+            quantity: `${p.stockQuantity} cái`,
+            // Seller information (backend provides sellerProfileId / sellerId)
+            sellerProfileId: p.sellerProfileId || p.sellerId || undefined,
+            sellerName: p.sellerName || (p.seller && (p.seller.companyName || p.seller.name)) || undefined
           }));
 
         setAllProducts(activeProducts);
+        // If some products have sellerProfileId but no sellerName, try to fetch seller display names
+        const idsToResolve = Array.from(new Set(activeProducts
+          .filter(p => (p.sellerProfileId || p.sellerName) && !p.sellerName)
+          .map(p => p.sellerProfileId)
+          .filter(Boolean) as string[]));
+
+        if (idsToResolve.length > 0) {
+          try {
+            const sellerFetches = idsToResolve.map(id =>
+              apiClient.client.get(`/Profile/${id}`).then(resp => ({ id, data: resp?.data?.data ?? resp?.data })).catch(() => ({ id, data: null }))
+            );
+            const sellers = await Promise.all(sellerFetches);
+            const nameById: Record<string, string> = {};
+            sellers.forEach(s => {
+              const d = s.data;
+              if (d) {
+                nameById[s.id] = d.companyName || d.CompanyName || d.contactName || d.ContactName || d.fullName || d.name || '';
+              }
+            });
+
+            if (Object.keys(nameById).length > 0) {
+              const merged = activeProducts.map(p => ({ ...p, sellerName: p.sellerName || (p.sellerProfileId ? nameById[p.sellerProfileId] : undefined) }));
+              setAllProducts(merged);
+            }
+          } catch (e) {
+            // swallow - optional enhancement, not required for baseline functionality
+            console.warn('Could not resolve seller names:', e);
+          }
+        }
         console.log('✅ Loaded', activeProducts.length, 'active products from API');
       } catch (err: any) {
         console.error('❌ Failed to fetch products:', err);

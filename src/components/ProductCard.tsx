@@ -11,9 +11,11 @@ interface ProductCardProps {
   name: string;
   description: string;
   id?: string;
+  sellerName?: string;
+  sellerProfileId?: string;
 }
 
-const ProductCard: React.FC<ProductCardProps & { onAddToCart?: (product: any) => void }> = ({ image, price, quantity, name, description, id, onAddToCart }) => {
+const ProductCard: React.FC<ProductCardProps & { onAddToCart?: (product: any) => void }> = ({ image, price, quantity, name, description, id, sellerName, sellerProfileId, onAddToCart }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const handleClick = () => {
@@ -92,6 +94,21 @@ const ProductCard: React.FC<ProductCardProps & { onAddToCart?: (product: any) =>
         </div>
         <div className="text-gray-400 text-xs mb-2 font-sans">Số lượng: {quantity}</div>
         <div className="text-gray-700 text-sm font-medium font-sans mb-1 line-clamp-2">{name}</div>
+        {sellerName && (
+          <div className="text-xs text-blue-600 hover:underline mb-2">
+            <a
+              href={sellerProfileId ? `/buyer/seller-detail/${encodeURIComponent(sellerProfileId)}` : '#'}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (sellerProfileId) {
+                  navigate(`/buyer/seller-detail/${encodeURIComponent(sellerProfileId)}`);
+                }
+              }}
+            >
+              Nhà bán: {sellerName}
+            </a>
+          </div>
+        )}
         <div className="text-gray-500 text-xs mt-auto font-sans line-clamp-3">{description}</div>
       </div>
     </div>

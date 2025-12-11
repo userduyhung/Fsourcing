@@ -145,7 +145,24 @@ export const productsApi = {
     return request('post', '/products', payload);
   },
   latest: () => generatedApi.productsExtra.latest(),
-  get: (id: string) => generatedApi.products.get(Number(id)),
+  get: (id: string) => {
+    // Some backends use GUID/string IDs for products. Avoid coercing to Number
+    // which produces NaN for GUIDs and causes 404s. Use the raw id path.
+    // Prefer generated client when it expects numeric ids, but fall back to
+    // a direct request to support string/GUID identifiers.
+    try {
+      // If generated client expects numeric id, calling it with Number will
+      // return NaN for GUIDs; so only call generated client when id is a
+      // numeric string.
+      if (/^\d+$/.test(String(id))) {
+        // @ts-ignore - use generated API when numeric
+        return generatedApi.products.get(Number(id));
+      }
+    } catch (e) {
+      // ignore and fallback to raw request
+    }
+    return request('get', `/Products/${encodeURIComponent(String(id))}`);
+  },
   search: (params?: any) => generatedApi.search.products(params),
 };
 

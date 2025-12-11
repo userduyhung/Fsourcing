@@ -3,6 +3,7 @@
 // TEMPORARY: Using localStorage instead of backend API (in-memory DB issue)
 
 import { logger } from '../utils/logger';
+import { productsApi } from './apiClient';
 
 // Keep these for future use when backend is ready
 // During development prefer relative '/api' so Vite dev proxy handles requests
@@ -259,31 +260,72 @@ export async function getCart(): Promise<Cart> {
     const itemsWithDetails = await Promise.all(
       items.map(async (item: any) => {
         try {
-          const productRes = await fetch(`${API_BASE}/Products/${item.productId}`, {
-            method: 'GET',
-            headers: getHeaders(),
-          });
-          
-          if (productRes.ok) {
-            const productData = await productRes.json();
-            const product = productData.data || productData;
-            
-            logger.debug('CartService', `product data for ${item.productId}`, { 
-              name: product.name, 
-              image: product.image,
+          try {
+            // Use centralized API client which handles baseURL and auth header
+            const productResp: any = await productsApi.get(item.productId);
+            // productsApi.get may return the product directly or an envelope; normalize
+            const product = (productResp && (productResp.data || productResp)) || productResp;
+
+            logger.debug('CartService', `product data for ${item.productId}`, {
+              name: product?.name,
+              image: product?.image || product?.imagePath,
               rawProduct: product
             });
-            
-            return {
-              id: item.id,
-              productId: item.productId,
-              productName: product.name || product.productName || product.Name || 'Sản phẩm',
-              quantity: item.quantity,
-              price: item.price || product.price || product.Price || 0,
-              image: product.image || product.Image || product.imagePath || product.ImagePath || 'https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg'
-            };
-          } else {
-            logger.warn('CartService', `failed to fetch product ${item.productId}`, { status: productRes.status });
+
+            if (product) {
+              return {
+                id: item.id,
+                productId: item.productId,
+                productName: product.name || product.productName || product.Name || 'Sản phẩm',
+                quantity: item.quantity,
+                price: item.price || product.price || product.ReferencePrice || product.Price || 0,
+                image: product.image || product.Image || product.imagePath || product.ImagePath || 'https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg'
+              };
+            }
+          } catch (err: any) {
+            // Log that the direct fetch failed
+            logger.warn('CartService', `failed to fetch product ${item.productId} directly`, err?.response || err?.message || err);
+
+            // Fallback strategy: fetch product list and try to match by several heuristics.
+            try {
+              const resp = await fetch(`${API_BASE}/Products`, { method: 'GET', headers: getHeaders() });
+              const json = await resp.json().catch(() => null);
+              const list = (json && (json.data || json)) || [];
+
+              // Try to find by exact match first
+              let found = list.find((p: any) => String(p.id) === String(item.productId) || String(p.Id) === String(item.productId) || String(p.productId) === String(item.productId));
+
+              // Try matching ID without hyphens (some storages remove hyphens)
+              if (!found) {
+                const compact = String(item.productId).replace(/-/g, '');
+                found = list.find((p: any) => String(p.id).replace(/-/g, '') === compact || String(p.Id || '').replace(/-/g, '') === compact);
+              }
+
+              // Try match by name as last resort (may generate false positives)
+              if (!found) {
+                found = list.find((p: any) => {
+                  try {
+                    return p.name && String(p.name).toLowerCase() === String(item.productName || '').toLowerCase();
+                  } catch { return false; }
+                });
+              }
+
+              if (found) {
+                logger.info('CartService', `resolved missing product ${item.productId} via list lookup -> ${found.id || found.Id || found.productId}`);
+                return {
+                  id: item.id,
+                  productId: item.productId,
+                  productName: found.name || found.productName || 'Sản phẩm',
+                  quantity: item.quantity,
+                  price: item.price || found.price || found.referencePrice || found.ReferencePrice || 0,
+                  image: found.image || found.imagePath || 'https://upload.wikimedia.org/wikipedia/commons/1/14/No_Image_Available.jpg'
+                };
+              }
+            } catch (listErr) {
+              logger.warn('CartService', `fallback product list lookup failed for ${item.productId}`, listErr);
+            }
+
+            // If still not found, proceed to fallback return below
           }
         } catch (err) {
           logger.error('CartService', `error fetching product ${item.productId}`, err);
