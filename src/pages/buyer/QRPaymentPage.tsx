@@ -144,12 +144,12 @@ const QRPaymentPage: React.FC = () => {
 
                     {/* QR Code Section */}
                     <div className="mb-8 flex flex-col items-center">
-                        <div className="bg-white p-6 rounded-lg border-4 border-purple-500 shadow-xl mb-4">
+                        <div className="bg-white rounded-lg border-4 border-purple-500 shadow-xl mb-4 w-72 h-72 md:w-96 md:h-96 overflow-hidden flex items-center justify-center">
                             {/* Static QR Code Image - Replace with your own QR image */}
                             <img
-                                src="https://res.cloudinary.com/dcworyvtj/image/upload/v1765338336/qr_thanh_to%C3%A1n_c%E1%BB%A7a_a_phong_j6x7qp.jpg"
+                                src="https://res.cloudinary.com/dcworyvtj/image/upload/v1765515327/qr_qu%C3%A9t_m%C3%A3_thanh_to%C3%A1n_tjsacs.jpg"
                                 alt="QR Code thanh toán"
-                                className="w-64 h-64 object-contain"
+                                className="w-full h-full object-contain"
                             />
                             {/* 
                             HƯỚNG DẪN SỬ DỤNG:
